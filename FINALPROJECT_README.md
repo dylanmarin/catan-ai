@@ -3,8 +3,7 @@
 NEXT:
 resource synergy of a settlement
 road placement
-
-
+test settlement placement when it doesnt go first or get its favorite choices
 
 backlog:
 HIGH:
