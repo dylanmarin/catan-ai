@@ -73,7 +73,7 @@ class catanGame():
         # add in AI players first
         for i in range(self.numAIPlayers):
             test_AI_player = dylanAIPlayer(
-                'AIPlayer{}'.format(i+1), playerColors[i])
+                'ai{}'.format(i+1), playerColors[i])
             test_AI_player.updateAI()
             self.playerQueue.put(test_AI_player)
 
@@ -93,7 +93,7 @@ class catanGame():
         # NOTE: this is where AI players are added
         for i in range(self.numAIPlayers):
             test_AI_player = dylanAIPlayer(
-                'AIPlayer{}'.format(i+1), playerColors[i+(self.numPlayers - self.numAIPlayers)])
+                'ai{}'.format(i+1), playerColors[i+(self.numPlayers - self.numAIPlayers)])
             test_AI_player.updateAI()
             self.playerQueue.put(test_AI_player)
 
@@ -472,6 +472,7 @@ class catanGame():
 
 # Initialize new game and run
 newGame = catanGame()
+newGame.playCatan()
 
 for i in range(99999999999):
     a=1

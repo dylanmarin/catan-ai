@@ -3,7 +3,6 @@
 
 from board import *
 from player import *
-# from catanGame import *
 import numpy as np
 
 # Class definition for an AI player
@@ -13,7 +12,7 @@ class dylanAIPlayer(player):
 
     # Update AI player flag and resources
     # DYLAN: Added params to give initial preference to different resources
-    def updateAI(self, ore=5, brick=5, wheat=5, wood=5, sheep=5, port_desire=1):
+    def updateAI(self, ore=4, brick=4, wheat=4, wood=4, sheep=4, port_desire=1, resource_diversity=1):
         self.isAI = True
 
         # Initialize resources with just correct number needed for set up (2 settlements and 2 road)
@@ -25,7 +24,14 @@ class dylanAIPlayer(player):
         self.diceRoll_expectation = {2: 1, 3: 2, 4: 3, 5: 4,
                                      6: 5, 8: 5, 9: 4, 10: 3, 11: 2, 12: 1, None: 0}
 
+        '''
         # DYLAN: Added dicitonary of resource preferences to help tweak the ai on what to pick initially
+        
+        the relative size of these is what matters most, but I tried to keep them between 0-5, since they just 
+        are used to scale the production points of desired reosurces
+
+
+        '''
         self.resourcePreferences = {
             'ORE': ore, 'BRICK': brick, 'WHEAT': wheat, 'WOOD': wood, 'SHEEP': sheep}
 
@@ -40,6 +46,14 @@ class dylanAIPlayer(player):
         '''
         self.port_desire = port_desire
 
+        '''
+        resource diversity is a real value 0 to 1 that represents our desire for resource diversity
+
+        0 means we do not care what resources we currently have when evaluating a settlement placement
+        1 means that 5 production points of something we already have is proportionately bad to 5 production points of something we don't have at all
+
+        '''
+        self.resource_diversity = resource_diversity
         print("Added new AI Player: ", self.name)
 
     # Function to build an initial settlement - just choose random spot for now
@@ -58,6 +72,9 @@ class dylanAIPlayer(player):
         best_placement = max(possible_placements,
                              key=possible_placements.get)
 
+        self.getDiversityOfSettlement(board, best_placement)
+
+        self.evaluateSettlement(board, best_placement)
         self.build_settlement(best_placement, board)
 
     # DYLAN: Added evaluate settlement function
@@ -65,26 +82,43 @@ class dylanAIPlayer(player):
         '''
         multiply production by desire for that production
 
-        add rating of ports usable by this settlement to the rating
+        add rating of ports usable by this our current settlements in addition to this 
+        hypothetical settlement to the rating
+
+        use self.resource_diversity to scale our desire for resource diversity
 
         '''
 
+        debug = True
+
         total_rating = 0
 
-        # Evaluate based on adjacent hexes
-        for adjacentHex in board.boardGraph[settlement_location].adjacentHexList:
-            resourceType = board.hexTileDict[adjacentHex].resource.type
-            if (resourceType != 'DESERT'):
-                numValue = board.hexTileDict[adjacentHex].resource.num
+        # Evaluate based on production points of surrounding hexes
 
-                # multiply production points by desire for that resuorce
-                total_rating += self.diceRoll_expectation[numValue] * \
-                    self.resourcePreferences[resourceType]
+        # for each resource type
+        for resourceType in self.resourcePreferences.keys():
+            # add the production points of that resource for this settlement to the rating
 
-        # Evaluate nearby ports and add that rating to the total rating
+            production_points = self.getProductionPointsForSettlement(
+                board, resourceType, settlement_location)
+
+            total_rating += production_points * \
+                self.resourcePreferences[resourceType]
+
+            # if this settlement produces resourceType
+            if production_points > 0:
+                # then we subtract our current production for that resource, times our resource diversiity desire
+                total_rating += self.resource_diversity * \
+                    self.getDiversityOfSettlement(board, settlement_location)
+
         port = board.boardGraph[settlement_location].port
         if port:
-            total_rating += self.evaluatePort(board, port, settlement_location)
+            # multiply the addition by self.port_desire
+            total_rating += self.port_desire * \
+                self.evaluatePort(board, port, settlement_location)
+
+        if debug:
+            print("Rating of settlement: {}".format(total_rating))
 
         return total_rating
 
@@ -100,14 +134,13 @@ class dylanAIPlayer(player):
 
             # want it to be proportional to production points but not too overpowered
             total_value += 0.5 * self.port_desire * \
-                self.getProductionPoints(
+                self.getOurProductionPoints(
                     board, port_resource_type, hypothetical_settlement)
         else:
-            # if it is 3:1 add scaled down value proportional to total production points
+            # if it is 3:1 add scaled down value proportional to total production points for all resources
             for resource_type in self.resources.keys():
-                threeToOneRatio = 0.33 * self.port_desire
-                total_value += threeToOneRatio * \
-                    self.getProductionPoints(
+                total_value += 0.33 * \
+                    self.getOurProductionPoints(
                         board, resource_type, hypothetical_settlement)
 
         if debug:
@@ -115,8 +148,9 @@ class dylanAIPlayer(player):
 
         return total_value
 
-    def getProductionPoints(self, board, resource, hypothetical_settlement):
-        # Return amount of hex of given resource times amount of ways to roll the number on each hex
+    def getOurProductionPoints(self, board, resource, hypothetical_settlement):
+        # Return amount of hex of given resource times amount of ways to roll the number on each
+        # hex for this specific player's settlements + an additional settlement
 
         total_prod = 0
 
@@ -140,7 +174,6 @@ class dylanAIPlayer(player):
         for adjacentHex in board.boardGraph[settlement].adjacentHexList:
             # get the resource type
             resourceType = board.hexTileDict[adjacentHex].resource.type
-
             # if the resource is the type we want to know about it
             if (resourceType == resource):
                 # get the value on the hex
@@ -150,6 +183,58 @@ class dylanAIPlayer(player):
                 total_prod += self.diceRoll_expectation[numValue]
 
         return total_prod
+
+    def getDiversityOfSettlement(self, board, settlement_location):
+        '''
+        assign some diversity score to a given settlement. higher value means it has higher overall diversity
+
+        we will divide the total number of adjacent hexes (max 3) by the amount of resources that are unique
+
+        '''
+
+        debug = True
+
+        total_diversity_score = 0
+
+        unique_resources_present = set()
+        total_adjacent_hexes = 0
+
+        # dict that tracks the max production of each resource that we've seen at this cell
+        max_prod_for_type = {}
+        for resource_type in self.resourcePreferences.keys():
+            max_prod_for_type[resource_type] = self.getOurProductionPoints(
+                board, resource_type, None)
+
+        max_prod_for_type["DESERT"] = 0
+
+        # for each adjacent resource
+        for adjacentHex in board.boardGraph[settlement_location].adjacentHexList:
+            resource_type = board.hexTileDict[adjacentHex].resource.type
+
+            # add to the count of adjacent hexes and add the resource to the set of resources we've seen
+            unique_resources_present.add(resource_type)
+            total_adjacent_hexes += 1
+
+            # get the production points of the current adjacent hex
+            production_points = self.diceRoll_expectation[board.hexTileDict[adjacentHex].resource.num]
+
+            # subtract the production points of the current resource at this hex by the amount of production we
+            # already have for that resource. add the difference to our diversity score, with floor of 0
+            total_diversity_score += max(production_points -
+                                         max_prod_for_type[resource_type], 0)
+
+            # if the current hex provides higher production than we had, use it in furhter calculations
+            max_prod_for_type[resource_type] = max(
+                production_points, max_prod_for_type[resource_type])
+
+        if debug:
+            print("{} out of {} hexes are unique types. Total new production points provided: {}".format(
+                len(unique_resources_present), total_adjacent_hexes, total_diversity_score))
+
+        total_diversity_score *= total_adjacent_hexes / \
+            len(unique_resources_present)
+
+        return total_diversity_score
 
         '''
 

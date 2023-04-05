@@ -1,4 +1,12 @@
 # TODO
+
+NEXT:
+resource synergy of a settlement
+road placement
+
+
+
+backlog:
 HIGH:
 AI First settlment placement ai
 
@@ -19,6 +27,7 @@ COMPLETED:
 - basic initial settlement evaluation
 - AI initial resource desire priority
 - port evaluation and port desire variable
+- add diversity evaluation for settlements
 
 
 
