@@ -71,7 +71,6 @@ class catanGame():
 
         # NOTE: this is where AI players are added
         for i in range(self.numAIPlayers):
-            # test_AI_player = heuristicAIPlayer('Random-Greedy-AI', playerColors[i+1]) #Add the AI Player last
             test_AI_player = dylanAIPlayer(
                 'AIPlayer{}'.format(i+1), playerColors[i+(self.numPlayers - self.numAIPlayers)])
             test_AI_player.updateAI()
@@ -88,6 +87,7 @@ class catanGame():
                 # AI player calls initial setup to place its first settlements and roads
                 player_i.initial_setup(self.board)
                 self.boardView.displayGameScreen()
+                pygame.display.update() 
 
             else:
                 self.build(player_i, 'SETTLE')
@@ -102,6 +102,7 @@ class catanGame():
             if (player_i.isAI):
                 player_i.initial_setup(self.board)
                 self.boardView.displayGameScreen()
+                pygame.display.update() 
 
             else:
                 self.build(player_i, 'SETTLE')
@@ -426,7 +427,7 @@ class catanGame():
                                         turnOver = True  # Update flag to nextplayer turn
 
                     # Update the display
-                    #self.displayGameScreen(None, None)
+                    # self.displayGameScreen(None, None)
                     pygame.display.update()
 
                     # Check if game is over
@@ -449,7 +450,11 @@ class catanGame():
 
 # Initialize new game and run
 newGame = catanGame()
-while (True):
-    newGame.boardView.displayGameScreen()
-    pygame.display.update()
+
+for i in range(99999999999):
+    a=1
+# while (True):
+#     newGame.boardView.displayGameScreen()
+#     pygame.display.update()
+#     a = 1
 # newGame.playCatan()
