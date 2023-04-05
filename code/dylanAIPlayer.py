@@ -12,7 +12,7 @@ class dylanAIPlayer(player):
 
     # Update AI player flag and resources
     # DYLAN: Added params to give initial preference to different resources
-    def updateAI(self, ore=4, brick=4, wheat=4, wood=4, sheep=4, port_desire=1, resource_diversity=1):
+    def updateAI(self, ore=4, brick=4, wheat=4, wood=4, sheep=4, port_desire=1, resource_diversity=0.65):
         self.isAI = True
 
         # Initialize resources with just correct number needed for set up (2 settlements and 2 road)
