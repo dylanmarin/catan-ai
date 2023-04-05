@@ -18,11 +18,17 @@ class catanGameView():
         self.screen = pygame.display.set_mode(self.board.size)
         pygame.display.set_caption('Settlers of Catan')
         self.font_resource = pygame.font.SysFont('cambria', 15)
-        self.font_ports = pygame.font.SysFont('cambria', 10)
+        self.font_hexNum = pygame.font.SysFont('arialblack', 20)
+        self.font_ports = pygame.font.SysFont('arialblack', 10)
 
-        self.font_button = pygame.font.SysFont('cambria', 12)
-        self.font_diceRoll = pygame.font.SysFont('cambria', 25) #dice font
+        self.font_button = pygame.font.SysFont('arialblack', 12)
+        self.font_diceRoll = pygame.font.SysFont('arialblack', 25) #dice font
         self.font_Robber = pygame.font.SysFont('arialblack', 50) #robber font
+
+
+        # DYLAN: Moved their diceRoll_expectation dict into a class var
+        self.diceRoll_expectation = {2: 1, 3: 2, 4: 3, 5: 4,
+                                6: 5, 8: 5, 9: 4, 10: 3, 11: 2, 12: 1, None: 0}
 
         return None
 
@@ -43,8 +49,15 @@ class catanGameView():
 
             hexTile.pixelCenter = hex_to_pixel(self.board.flat, hexTile.hex) #Get pixel center coordinates of hex
             if(hexTile.resource.type != 'DESERT'): #skip desert text/number
-                resourceText = self.font_resource.render(str(hexTile.resource.type) + " (" +str(hexTile.resource.num) + ")", False, (0,0,0))
+
+                # DYLAN: ADJUSTED CODE TO MAKE READABILITY BETTER
+
+                resourceText = self.font_resource.render(str(hexTile.resource.type), False, (0,0,0))
+                hexNumText = self.font_hexNum.render(str(hexTile.resource.num), False, (0,0,0))
+                # hexNumText = self.font_hexNum.render(str(hexTile.resource.num) + " (" + self.diceRoll_expectation[hexTile.resource.num] * "●" +")", False, (0,0,0))
+
                 self.screen.blit(resourceText, (hexTile.pixelCenter.x -25, hexTile.pixelCenter.y)) #add text to hex
+                self.screen.blit(hexNumText, (hexTile.pixelCenter.x - 15, hexTile.pixelCenter.y - 30)) #add num to hex
 
 
         #Display the Ports - update images/formatting later

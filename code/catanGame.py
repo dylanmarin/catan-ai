@@ -63,7 +63,28 @@ class catanGame():
     def build_initial_settlements(self):
         # Initialize new players with names and colors
         playerColors = ['black', 'darkslateblue', 'magenta4', 'orange1']
-        # for i in range(self.numPlayers - 1):
+
+        '''
+        NOTE: adding in AI players first so that I can see where they place when given the choice
+
+
+        '''
+
+        # add in AI players first
+        for i in range(self.numAIPlayers):
+            test_AI_player = dylanAIPlayer(
+                'AIPlayer{}'.format(i+1), playerColors[i])
+            test_AI_player.updateAI()
+            self.playerQueue.put(test_AI_player)
+
+        for i in range(self.numPlayers - self.numAIPlayers):
+            playerNameInput = input("Enter Player {} name: ".format(i+1))
+            newPlayer = player(playerNameInput, playerColors[i+(self.numAIPlayers)])
+            self.playerQueue.put(newPlayer)
+
+        '''
+        code to add real players first
+
         for i in range(self.numPlayers - self.numAIPlayers):
             playerNameInput = input("Enter Player {} name: ".format(i+1))
             newPlayer = player(playerNameInput, playerColors[i])
@@ -76,6 +97,8 @@ class catanGame():
             test_AI_player.updateAI()
             self.playerQueue.put(test_AI_player)
 
+        '''
+
         playerList = list(self.playerQueue.queue)
 
         self.boardView.displayGameScreen()  # display the initial gameScreen
@@ -87,7 +110,6 @@ class catanGame():
                 # AI player calls initial setup to place its first settlements and roads
                 player_i.initial_setup(self.board)
                 self.boardView.displayGameScreen()
-                pygame.display.update() 
 
             else:
                 self.build(player_i, 'SETTLE')
