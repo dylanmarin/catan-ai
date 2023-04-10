@@ -12,7 +12,7 @@ class dylanAIPlayer(player):
 
     # Update AI player flag and resources
     # DYLAN: Added params to give initial preference to different resources
-    def updateAI(self, ore=4, brick=4, wheat=4, wood=4, sheep=4, port_desire=1, resource_diversity=0.65):
+    def updateAI(self, game, ore=4, brick=4, wheat=4, wood=4, sheep=4, port_desire=0.85, resource_diversity_desire=0.6):
         self.isAI = True
 
         # Initialize resources with just correct number needed for set up (2 settlements and 2 road)
@@ -26,14 +26,14 @@ class dylanAIPlayer(player):
 
         '''
         # DYLAN: Added dicitonary of resource preferences to help tweak the ai on what to pick initially
-        
-        the relative size of these is what matters most, but I tried to keep them between 0-5, since they just 
+
+        the relative size of these is what matters most, but I tried to keep them between 0-5, since they just
         are used to scale the production points of desired reosurces
-
-
         '''
+
+        total = ore + brick + wheat + wood + sheep
         self.resourcePreferences = {
-            'ORE': ore, 'BRICK': brick, 'WHEAT': wheat, 'WOOD': wood, 'SHEEP': sheep}
+            'ORE': ore / total, 'BRICK': brick / total, 'WHEAT': wheat / total, 'WOOD': wood / total, 'SHEEP': sheep / total}
 
         # DYLAN:
         '''
@@ -53,14 +53,32 @@ class dylanAIPlayer(player):
         1 means that 5 production points of something we already have is proportionately bad to 5 production points of something we don't have at all
 
         '''
-        self.resource_diversity = resource_diversity
+        self.resource_diversity_desire = resource_diversity_desire
+        self.game = game
+
         print("Added new AI Player: ", self.name)
 
     # Function to build an initial settlement - just choose random spot for now
 
     def initial_setup(self, board):
 
-        # All possible vertices for initial placement. accounts for only valid spots to place
+        # get the best setup settlement placement according to our settlement evaluation
+        best_placement = self.getBestSetupSettlement(board)
+
+        print("testing place robber")
+        self.place_robber(board)
+        # self.getDiversityOfSettlement(board, best_placement)
+        # self.evaluateSettlement(board, best_placement)
+        self.build_settlement(best_placement, board)
+
+        # 3 roads next to current
+        best_road = self.pick_setup_road(board)
+        self.build_road(best_road[0], best_road[1], board)
+
+
+    # DYLAN: Added evaluate settlement function
+
+    def getBestSetupSettlement(self, board):
         possible_placements = {}
         for placement in board.get_setup_settlements(self).keys():
             possible_placements[placement] = 0
@@ -69,27 +87,20 @@ class dylanAIPlayer(player):
             possible_placements[p] = self.evaluateSettlement(board, p)
 
         # get the placement with the max value
-        best_placement = max(possible_placements,
-                             key=possible_placements.get)
+        return max(possible_placements, key=possible_placements.get)
 
-        self.getDiversityOfSettlement(board, best_placement)
-
-        self.evaluateSettlement(board, best_placement)
-        self.build_settlement(best_placement, board)
-
-    # DYLAN: Added evaluate settlement function
     def evaluateSettlement(self, board, settlement_location):
         '''
         multiply production by desire for that production
 
-        add rating of ports usable by this our current settlements in addition to this 
+        add rating of ports usable by this our current settlements in addition to this
         hypothetical settlement to the rating
 
-        use self.resource_diversity to scale our desire for resource diversity
+        use self.resource_diversity_desire to scale our desire for resource diversity
 
         '''
 
-        debug = True
+        debug = False
 
         total_rating = 0
 
@@ -107,8 +118,8 @@ class dylanAIPlayer(player):
 
             # if this settlement produces resourceType
             if production_points > 0:
-                # then we subtract our current production for that resource, times our resource diversiity desire
-                total_rating += self.resource_diversity * \
+                # then we add a diversity score multiplied by how much we car about resource diversity
+                total_rating += self.resource_diversity_desire * \
                     self.getDiversityOfSettlement(board, settlement_location)
 
         port = board.boardGraph[settlement_location].port
@@ -116,6 +127,9 @@ class dylanAIPlayer(player):
             # multiply the addition by self.port_desire
             total_rating += self.port_desire * \
                 self.evaluatePort(board, port, settlement_location)
+
+        total_rating += self.resource_synergy_in_setup(
+            board, settlement_location)
 
         if debug:
             print("Rating of settlement: {}".format(total_rating))
@@ -188,11 +202,11 @@ class dylanAIPlayer(player):
         '''
         assign some diversity score to a given settlement. higher value means it has higher overall diversity
 
-        we will divide the total number of adjacent hexes (max 3) by the amount of resources that are unique
+        we will divide the total number of adjacent hexes(max 3) by the amount of resources that are unique
 
         '''
 
-        debug = True
+        debug = False
 
         total_diversity_score = 0
 
@@ -236,51 +250,380 @@ class dylanAIPlayer(player):
 
         return total_diversity_score
 
+    def resource_synergy_in_setup(self, board, settlement_location):
+        '''
+        This is a function that is meant to provide a rating for a given settlement based
+        on how well the resources that the settlement provides synergize with each other
+        and with our current production.
+
+        Combination of self_synergy and setup_synergy
+
+        self_synergy benefits settlements that work well on their own,
+        i.e. an ORE-WHEAT-SHEEP settlement, or a WOOD-BRICK settlement
+
+        setup_synergy increases when the production points that the settlement provides
+        help us balance out ratios for building things
+        '''
+        debug = False
+
+        total_score = 0
+        settlement_resources = board.boardGraph[settlement_location].adjacentHexList
+        settlement_production_points = {}
+
+        for resource in self.resourcePreferences:
+            settlement_production_points[resource] = self.getProductionPointsForSettlement(
+                board, resource, settlement_location)
+
+        # benefit wood-brick, wheat-ore, ore-wheat-sheep
+        self_synergy = 0
+
+        if "WOOD" in settlement_resources and "BRICK" in settlement_resources:
+
+            self_synergy += settlement_production_points["WOOD"]
+            self_synergy += settlement_production_points["BRICK"]
+
+            self_synergy *= (self.resourcePreferences["WOOD"] +
+                             self.resourcePreferences["BRICK"])
+
+            if debug:
+                print("Benefiting WOOD-BRICK by {}".format(self_synergy))
+
+        elif "ORE" in settlement_resources and "WHEAT" in settlement_resources and "SHEEP" in settlement_resources:
+            self_synergy += settlement_production_points["ORE"]
+            self_synergy += settlement_production_points["WHEAT"]
+            self_synergy += settlement_production_points["SHEEP"]
+
+            self_synergy *= (self.resourcePreferences["ORE"] +
+                             self.resourcePreferences["WHEAT"] + self.resourcePreferences["SHEEP"])
+            if debug:
+                print("Benefiting ORE-WHEAT-SHEEP by {}".format(self_synergy))
+
+        elif "WHEAT" in settlement_resources and "SHEEP" in settlement_resources:
+            self_synergy += settlement_production_points["WHEAT"]
+            self_synergy += settlement_production_points["SHEEP"]
+
+            self_synergy *= (self.resourcePreferences["WHEAT"] +
+                             self.resourcePreferences["SHEEP"])
+            if debug:
+                print("Benefiting WHEAT-SHEEP by {}".format(self_synergy))
+
+        return self_synergy
+
+        our_production_points = {}
+
+        for resource in self.resourcePreferences:
+            our_production_points[resource] = self.getOurProductionPoints(
+                board, resource, None)
+
+        # for resource in settlement_resources:
+
+        '''
+        in general we are using ratio of buyable items as guidelines for synergy.
+        # however, we dont wanna benefit surpassing the ratio, as in, if the settlement tips
+        # our ore ratio to be too high, we dont want to punish
         '''
 
-        #Build road
-        possibleRoads = board.get_setup_roads(self)
-
-
-        # BUILDING ROAD
-
-        randomEdge = np.random.randint(0, len(possibleRoads.keys()))
-        self.build_road(list(possibleRoads.keys())[randomEdge][0], list(possibleRoads.keys())[randomEdge][1], board)
         '''
+        if this settlement has wood or brick, we care if it balances out our wood/brick to be closer to our resource preferences
+        or if it balances out wood-brick-sheep-wheat to be like 3-3-2-2 ish
+        '''
+        if "WOOD" in settlement_resources:
+            old_wood_brick_ratio = our_production_points["WOOD"] / \
+                our_production_points["BRICK"]
+            new_wood_brick_ratio = (our_production_points["WOOD"] + settlement_production_points["WOOD"]) / \
+                (our_production_points["BRICK"] +
+                    settlement_production_points["BRICK"])
+
+            # first term is negative if we had more brick than wood
+            # second term is negative if we had more brick than wood
+
+            somethingsomething = (old_wood_brick_ratio - 0.5) - \
+                (new_wood_brick_ratio - 0.5)
+
+            return
+        if resource == "BRICK":
+            return
+
+        '''
+        if this settlement has sheep, we want to benefit it for making our ore-wheat-sheep ratio 1-1-1
+        or for making our wood-brick-sheep-wheat to be like 3-3-2-2 ish
+        '''
+
+        '''
+        if this settlement has wheat, we want to benefit it for making our ore-wheat-sheep ratio 1-1-1
+        or for making our wood-brick-sheep-wheat to be like 3-3-2-2 ish
+
+        OR for making our wheat-ore ratio more 2: 3
+        '''
+
+        '''
+        if this settlement has ore, we want to benefit it for making our ore-wheat-sheep ratio 1-1-1
+        or for making our wheat-ore ratio more 2: 3
+        '''
+
+        total_score += self_synergy
+
+        return total_score
+
+    def pick_setup_road(self, board):
+        '''
+        Function used just for initial road choice
+        '''
+
+        # get next best settlement, and build a road in the direction of it
+        last_settlement = self.buildGraph['SETTLEMENTS'][-1]
+
+        possible_placements = {}
+        for placement in board.get_setup_settlements(self).keys():
+            if placement != last_settlement:
+                possible_placements[placement] = 0
+
+        for p in possible_placements.keys():
+            possible_placements[p] = self.evaluateSettlement(board, p)
+
+        # get the next best settlement spot and build in its direction
+        dest = max(possible_placements, key=possible_placements.get)
+
+        left = (dest.x - last_settlement.x) < 0
+        right = (dest.x - last_settlement.x) > 0
+        up = (dest.y - last_settlement.y) < 0
+        down = (dest.y - last_settlement.y) > 0
+
+        # gets 3 roads for last settlement was placed
+        possible_roads = board.get_setup_roads(self)
+
+        valid_options = {}
+
+        for road in possible_roads:
+            valid_options[road] = 0
+            start = road[0]
+            end = road[1]
+
+            if (end.x - start.x < 0) and left:
+                valid_options[road] += 1
+
+            if (end.x - start.x > 0) and right:
+                valid_options[road] += 1
+
+            if (end.y - start.y < 0) and up:
+                valid_options[road] += 1
+
+            if (end.y - start.y > 0) and down:
+                valid_options[road] += 1
+
+        return max(valid_options, key=valid_options.get)
 
     def move(self, board):
         print("AI Player {} playing...".format(self.name))
+        '''
+        Options: 
+
+        road
+        settlement
+        city
+        buy a dev card
+        play a dev card
+        propose a trade
+            - to players
+            - with port or bank
+
+        possible flow:
+
+        resources blocked OR it will give us largest army OR put us ahead in a current tie of knights:
+            play knight
+
+        roll
+
+        discard cards if necessary
+        move robber if necessary
+
+        check which (building) options are possible:
+            road
+            settlement
+            city
+            dev
+
+        get utility for all options:
+            settlement and city can both use settlement evaluate
+            road utility probs has something to do with settlements it opens up
+            buying dev card "utility" probably wins out when our production aligns with dev cards, and when we cant do other options
+
+        for each possible option, in order of their utility:
+            if we can do it, do it
+            if we can't, see if we have a dev card that helps us
+                if we do, play it and try to do our option again
+
+            if we can't do it, and we have no useful dev card:
+                see if porting or trading with bank allows us to do it
 
         '''
-        #Trade resources if there are excessive amounts of a particular resource
+
+        # we may have already played a knight before rolling
+
+        # (takes into account if we have already played a knight)
+        if self.should_play_knight_after_rolling(board):
+            # NOTE: does not take into account whether waiting to play another dev card is better
+            self.place_robber(board)
+
+
+
+
+        '''
+        # Trade resources if there are excessive amounts of a particular resource
         self.trade()
-        #Build a settlements, city and few roads
+        # Build a settlements, city and few roads
         possibleVertices = board.get_potential_settlements(self)
         if(possibleVertices != {} and (self.resources['BRICK'] > 0 and self.resources['WOOD'] > 0 and self.resources['SHEEP'] > 0 and self.resources['WHEAT'] > 0)):
             randomVertex = np.random.randint(0, len(possibleVertices.keys()))
             self.build_settlement(list(possibleVertices.keys())[randomVertex], board)
 
-        #Build a City
+        # Build a City
         possibleVertices = board.get_potential_cities(self)
         if(possibleVertices != {} and (self.resources['WHEAT'] >= 2 and self.resources['ORE'] >= 3)):
             randomVertex = np.random.randint(0, len(possibleVertices.keys()))
             self.build_city(list(possibleVertices.keys())[randomVertex], board)
 
-        #Build a couple roads
+        # Build a couple roads
         for i in range(2):
             if(self.resources['BRICK'] > 0 and self.resources['WOOD'] > 0):
                 possibleRoads = board.get_potential_roads(self)
                 randomEdge = np.random.randint(0, len(possibleRoads.keys()))
                 self.build_road(list(possibleRoads.keys())[randomEdge][0], list(possibleRoads.keys())[randomEdge][1], board)
 
-        #Draw a Dev Card with 1/3 probability
+        # Draw a Dev Card with 1/3 probability
         devCardNum = np.random.randint(0, 3)
         if(devCardNum == 0):
             self.draw_devCard(board)
         '''
         return
 
+    def should_play_knight_before_rolling(self, board):
+        # NOTE: Doesn't take into account value of staying blocked but playing a different dev card later in the turn
+
+        # if we are blocked
+        if self.any_settlement_blocked_by_robber(board):
+            # if we have exactly 7 cards, then we should usually be fine to play the knight, but
+            # sometimes if we play the knight we will get 8 cards and then roll a 7 and have to
+            # discard, so we should only do it most of the time
+            if sum(self.resources.values()) == 7:
+                # return true 5/6 times
+                return np.random.randint(0, 36) >= 6
+            else:
+                # play knight
+                return True
+        return False
+
+    def should_play_knight_after_rolling(self, board):
+        '''
+        if we are blocked, play it for future resource rolls until our next turn
+
+        if it will give us largest army for the win, play it
+
+        if we are tied in amount of knights played, and opponent has any dev cards, play it
+            if they don't have dev cards, we can wait
+        '''
+        if self.devCardPlayedThisTurn:
+            return False
+        
+        # shouldn't if we cant
+        if self.devCards["KNIGHT"] == 0:
+            return False
+            
+
+        if self.any_settlement_blocked_by_robber(board):
+            return True
+
+        # if anyone has more knights than us
+        for p in list(self.game.playerQueue.queue):
+            # NOTE: doesn't take into account if we should ever give up and not play the knight
+            if (p.knightsPlayed > self.knightsPlayed):
+                return True
+
+        play_flag = True
+        # if we don't have largest army but would win if we played a knight
+        if self.victoryPoints >= self.max_points - 2 and not self.largestArmyFlag:
+            # if we have already played at least 2 knights
+            if self.knightsPlayed >= 2:
+                # and every other player has AT MOST the same amount of knights:
+                for p in list(self.game.playerQueue.queue):
+                    # if any other player has strictly more knights than us, we wont take largest army
+                    if (p.knightsPlayed > self.knightsPlayed):
+                        play_flag = False
+
+        # if it would give us largest army for the win, play it
+        if play_flag:
+            return True
+
+        # if we are tied with anyone in number of knights who has a dev card, play a knight
+        for p in list(self.game.playerQueue.queue):
+            if (p.knightsPlayed == self.knightsPlayed) and (sum(p.devCards.values()) >= 1):
+                return True
+
+        return False
+
+    def place_robber(self, board):
+        # potentialRobberDict = self.board.get_robber_spots() # excludes the spot that had the orbber on it
+
+        all_players = list(self.game.playerQueue.queue)
+
+        # in order of number of victory points 
+        # NOTE: AI is currently cheating by knowing whether people have hidden VP dev cards
+        all_players.sort(reverse=True, key=lambda p: p.victoryPoints)
+
+
+        # check if all opponents have 0 cards
+        all_have_zero = True
+        for player in all_players:
+            # skip ourselves
+            if player != self:
+
+                if sum(player.resources.values()) > 0:
+                    all_have_zero = False
+    
+
+        # for each opponents with at least one card (or if all opponents have 0 cards then all of them)
+        for player in all_players:
+            # skip ourselves
+            if player != self:
+                # if this player has cards, or if everyone has zero cards
+                if sum(player.resources.values() > 0) or all_have_zero:
+                    settlements = player.buildGraph["SETTLEMENTS"]
+
+                    # rate all opponent settlements and sort them
+                    settlements.sort(reverse=True, key=lambda s : player.evaluateSettlement(board, s))
+
+                    # for each settlement
+                    for settlement in settlements:
+
+                        
+
+
+                        # get all adjacent hexes and sort them in order of production points
+                        for adj_hex in board.boardGraph[settlement].adjacentHexList:
+                            # if the hex is adjacent to our settlement, skip it
+                            if not self.hex_is_adjacent_to_us(board, hex):
+                                # otherwise place on the hex with most production   
+
+
+
+
+
+                    
+
+        # TODO: failsafe if somehow it all is not possible
+
+        self.devCardPlayedThisTurn = True
+        return
+
+    def any_settlement_blocked_by_robber(self, board):
+        for settlement in self.buildGraph["SETTLEMENTS"]:
+            for adj_hex in board.boardGraph[settlement].adjacentHexList:
+                if (board.hexTileDict[adj_hex].robber == True):
+                    return True
+        return False
+
     # Wrapper function to control all trading
+
     def trade(self):
         '''
         for r1, r1_amount in self.resources.items():
@@ -300,13 +643,13 @@ class dylanAIPlayer(player):
         '''
 
         '''
-        #Get list of robber spots
+        # Get list of robber spots
         robberHexDict = board.get_robber_spots()
         
-        #Choose a hexTile with maximum adversary settlements
+        # Choose a hexTile with maximum adversary settlements
         maxHexScore = 0 #Keep only the best hex to rob
         for hex_ind, hexTile in robberHexDict.items():
-            #Extract all 6 vertices of this hexTile
+            # Extract all 6 vertices of this hexTile
             vertexList = polygon_corners(board.flat, hexTile.hex)
 
             hexScore = 0 #Heuristic score for hexTile
@@ -318,7 +661,7 @@ class dylanAIPlayer(player):
                     hexScore -= self.victoryPoints
                 elif playerAtVertex != None: #There is an adversary on this vertex
                     hexScore += playerAtVertex.visibleVictoryPoints
-                    #Find strongest other player at this hex, provided player has resources
+                    # Find strongest other player at this hex, provided player has resources
                     if playerAtVertex.visibleVictoryPoints >= playerToRob_VP and sum(playerAtVertex.resources.values()) > 0:
                         playerToRob_VP = playerAtVertex.visibleVictoryPoints
                         playerToRob = playerAtVertex
@@ -340,10 +683,10 @@ class dylanAIPlayer(player):
         '''
 
         '''
-        #Get the best hex and player to rob
+        # Get the best hex and player to rob
         hex_i, playerRobbed = self.choose_player_to_rob(board)
 
-        #Move the robber
+        # Move the robber
         self.move_robber(hex_i, board, playerRobbed)
         '''
 
@@ -355,9 +698,9 @@ class dylanAIPlayer(player):
         '''
 
         '''
-        #Check if player can play a devCard this turn
+        # Check if player can play a devCard this turn
         if self.devCardPlayedThisTurn != True:
-            #Get a list of all the unique dev cards this player can play
+            # Get a list of all the unique dev cards this player can play
             devCardsAvailable = []
             for cardName, cardAmount in self.devCards.items():
                 if(cardName != 'VP' and cardAmount >= 1): #Exclude Victory points

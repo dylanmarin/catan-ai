@@ -18,6 +18,11 @@ class catanBoard(hexTile, Vertex):
     'Class Definition for Catan Board Logic'
     #Object Creation - creates a random board configuration with hexTiles
     def __init__(self):
+        # DYLAN: Added in np seeding random for testing
+
+        np.random.seed(121112)
+
+
         self.hexTileDict = {} #Dict to store all hextiles, with hexIndex as key
         self.vertex_index_to_pixel_dict = {} #Dict to store the Vertices coordinates with vertex indices as keys
         self.boardGraph = {} #Dict to store the vertex objects with the pixelCoordinates as keys

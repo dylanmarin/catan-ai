@@ -1,23 +1,35 @@
 # TODO
 
 NEXT:
-resource synergy of a settlement
-road placement
-test settlement placement when it doesnt go first or get its favorite choices
 
-backlog:
+making moves on your turn
+resource synergy of a settlement
+
+todo:
 HIGH:
-AI First settlment placement ai
+making moves
+
 
 MEDIUM: 
 AI discarding resources
 Fix drawing in between placing settlements. something is up
 
-
 LOW:
 Counting resources in bank before dealing out cards
+Bayesian inference on unplayed cards
+
 
 COMPLETED:
+
+4/9:
+- initial road placement (naively in direction of next desired settlement)
+- initial impl for whether we should place a knight (both for before rolling and for after)
+- most of robber placement function
+
+4/7:
+- seed the random for testing
+- road placement
+
 
 4/5:
 - make font a bit more readable in gameView.py

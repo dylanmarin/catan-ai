@@ -73,13 +73,13 @@ class catanGame():
         # add in AI players first
         for i in range(self.numAIPlayers):
             test_AI_player = dylanAIPlayer(
-                'ai{}'.format(i+1), playerColors[i])
-            test_AI_player.updateAI()
+                'ai{}'.format(i+1), playerColors[i], self.maxPoints)
+            test_AI_player.updateAI(self)
             self.playerQueue.put(test_AI_player)
 
         for i in range(self.numPlayers - self.numAIPlayers):
             playerNameInput = input("Enter Player {} name: ".format(i+1))
-            newPlayer = player(playerNameInput, playerColors[i+(self.numAIPlayers)])
+            newPlayer = player(playerNameInput, playerColors[i+(self.numAIPlayers)], self.maxPoints)
             self.playerQueue.put(newPlayer)
 
         '''
@@ -334,7 +334,12 @@ class catanGame():
                 while (turnOver == False):
 
                     if (currPlayer.isAI):
-                        # Roll Dice
+
+                        # check if AI wants to play a knight before rolling
+                        if currPlayer.should_play_knight_before_rolling(self.board):
+                            currPlayer.place_robber(self.board)
+
+                        # roll Dice
                         diceNum = self.rollDice()
                         diceRolled = True
                         self.update_playerResources(diceNum, currPlayer)
@@ -344,6 +349,7 @@ class catanGame():
                         # TODO: THIS IS WHERE THE AI TURN IS MADE
                         # AI Player makes all its moves
                         currPlayer.move(self.board)
+
                         # Check if AI player gets longest road/largest army and update Victory points
                         self.check_longest_road(currPlayer)
                         self.check_largest_army(currPlayer)

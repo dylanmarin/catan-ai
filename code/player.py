@@ -11,7 +11,7 @@ class player():
     'Class Definition for Game Player'
 
     # Initialize a game player, we use A, B and C to identify
-    def __init__(self, playerName, playerColor):
+    def __init__(self, playerName, playerColor, max_points):
         self.name = playerName
         self.color = playerColor
         self.victoryPoints = 0
@@ -46,6 +46,9 @@ class player():
         self.devCardPlayedThisTurn = False
 
         self.visibleVictoryPoints = self.victoryPoints - self.devCards['VP']
+
+        # NOTE: Dylan added max_points field so players are aware of how much they need to win
+        self.max_points = max_points
 
     # function to build a road from vertex v1 to vertex v2
 
