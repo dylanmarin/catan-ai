@@ -65,8 +65,6 @@ class dylanAIPlayer(player):
         # get the best setup settlement placement according to our settlement evaluation
         best_placement = self.getBestSetupSettlement(board)
 
-        print("testing place robber")
-        self.place_robber(board)
         # self.getDiversityOfSettlement(board, best_placement)
         # self.evaluateSettlement(board, best_placement)
         self.build_settlement(best_placement, board)
@@ -74,7 +72,6 @@ class dylanAIPlayer(player):
         # 3 roads next to current
         best_road = self.pick_setup_road(board)
         self.build_road(best_road[0], best_road[1], board)
-
 
     # DYLAN: Added evaluate settlement function
 
@@ -90,6 +87,54 @@ class dylanAIPlayer(player):
         return max(possible_placements, key=possible_placements.get)
 
     def evaluateSettlement(self, board, settlement_location):
+        '''
+        multiply production by desire for that production
+
+        add rating of ports usable by this our current settlements in addition to this
+        hypothetical settlement to the rating
+
+        use self.resource_diversity_desire to scale our desire for resource diversity
+
+        '''
+
+        debug = False
+
+        total_rating = 0
+
+        # Evaluate based on production points of surrounding hexes
+
+        # for each resource type
+        for resourceType in self.resourcePreferences.keys():
+            # add the production points of that resource for this settlement to the rating
+
+            production_points = self.getProductionPointsForSettlement(
+                board, resourceType, settlement_location)
+
+            total_rating += production_points * \
+                self.resourcePreferences[resourceType]
+
+            # if this settlement produces resourceType
+            if production_points > 0:
+                # then we add a diversity score multiplied by how much we car about resource diversity
+                total_rating += self.resource_diversity_desire * \
+                    self.getDiversityOfSettlement(board, settlement_location)
+
+        port = board.boardGraph[settlement_location].port
+        if port:
+            # multiply the addition by self.port_desire
+            total_rating += self.port_desire * \
+                self.evaluatePort(board, port, settlement_location)
+
+        total_rating += self.resource_synergy_in_setup(
+            board, settlement_location)
+
+        if debug:
+            print("Rating of settlement: {}".format(total_rating))
+
+        return total_rating
+
+
+    def evaluateOpponentSettlement(self, board, settlement_location):
         '''
         multiply production by desire for that production
 
@@ -467,7 +512,6 @@ class dylanAIPlayer(player):
 
 
 
-
         '''
         # Trade resources if there are excessive amounts of a particular resource
         self.trade()
@@ -500,8 +544,11 @@ class dylanAIPlayer(player):
     def should_play_knight_before_rolling(self, board):
         # NOTE: Doesn't take into account value of staying blocked but playing a different dev card later in the turn
 
+        if self.devCards["KNIGHT"] == 0:
+            return False
+
         # if we are blocked
-        if self.any_settlement_blocked_by_robber(board):
+        if self.any_settlement_blocked_by_robber(board) :
             # if we have exactly 7 cards, then we should usually be fine to play the knight, but
             # sometimes if we play the knight we will get 8 cards and then roll a 7 and have to
             # discard, so we should only do it most of the time
@@ -524,11 +571,10 @@ class dylanAIPlayer(player):
         '''
         if self.devCardPlayedThisTurn:
             return False
-        
+
         # shouldn't if we cant
         if self.devCards["KNIGHT"] == 0:
             return False
-            
 
         if self.any_settlement_blocked_by_robber(board):
             return True
@@ -562,14 +608,15 @@ class dylanAIPlayer(player):
         return False
 
     def place_robber(self, board):
+        print("{} is moving the robber...".format(self.name))
+
         # potentialRobberDict = self.board.get_robber_spots() # excludes the spot that had the orbber on it
 
         all_players = list(self.game.playerQueue.queue)
 
-        # in order of number of victory points 
+        # in order of number of victory points
         # NOTE: AI is currently cheating by knowing whether people have hidden VP dev cards
         all_players.sort(reverse=True, key=lambda p: p.victoryPoints)
-
 
         # check if all opponents have 0 cards
         all_have_zero = True
@@ -579,41 +626,56 @@ class dylanAIPlayer(player):
 
                 if sum(player.resources.values()) > 0:
                     all_have_zero = False
-    
+
+        valid_robber_spots = board.get_robber_spots()
 
         # for each opponents with at least one card (or if all opponents have 0 cards then all of them)
         for player in all_players:
             # skip ourselves
             if player != self:
                 # if this player has cards, or if everyone has zero cards
-                if sum(player.resources.values() > 0) or all_have_zero:
+                if sum(player.resources.values()) > 0 or all_have_zero:
                     settlements = player.buildGraph["SETTLEMENTS"]
 
                     # rate all opponent settlements and sort them
-                    settlements.sort(reverse=True, key=lambda s : player.evaluateSettlement(board, s))
+                    # TODO: evaluate opponent settlement
+                    # settlements.sort(
+                    #     reverse=True, key=lambda s: player.evaluateSettlement(board, s))
 
                     # for each settlement
                     for settlement in settlements:
-
-                        
-
+                        valid_hex_options = []
 
                         # get all adjacent hexes and sort them in order of production points
                         for adj_hex in board.boardGraph[settlement].adjacentHexList:
+
+
                             # if the hex is adjacent to our settlement, skip it
-                            if not self.hex_is_adjacent_to_us(board, hex):
-                                # otherwise place on the hex with most production   
+                            if not self.hex_is_adjacent_to_us(board, adj_hex) and adj_hex in valid_robber_spots:
+                                # otherwise place on the hex with most production
+                                valid_hex_options.append(adj_hex)
 
 
+                        valid_hex_options.sort(reverse=True, key= lambda h : self.production_points_for_hex(board, h))
 
+                        for option in valid_hex_options:
+                            self.move_robber(option, board, player)
+                            self.devCardPlayedThisTurn = True
+                            return
 
-
-                    
-
-        # TODO: failsafe if somehow it all is not possible
-
-        self.devCardPlayedThisTurn = True
+        # TODO: failsafe if somehow it all is not possible, just pick one that has most production next to someone with a card
         return
+
+    def production_points_for_hex(self, board, hex_num):
+        return self.diceRoll_expectation[board.hexTileDict[hex_num].resource.num]
+
+    def hex_is_adjacent_to_us(self, board, adjacent_hex):
+        for settlement in self.buildGraph["SETTLEMENTS"]:
+            for adj_hex in board.boardGraph[settlement].adjacentHexList:
+                if adj_hex == adjacent_hex:
+                    return True
+
+        return False
 
     def any_settlement_blocked_by_robber(self, board):
         for settlement in self.buildGraph["SETTLEMENTS"]:
@@ -621,6 +683,8 @@ class dylanAIPlayer(player):
                 if (board.hexTileDict[adj_hex].robber == True):
                     return True
         return False
+
+    
 
     # Wrapper function to control all trading
 
@@ -633,64 +697,6 @@ class dylanAIPlayer(player):
                         self.trade_with_bank(r1, r2)
                         break
         '''
-
-    # Choose which player to rob
-    def choose_player_to_rob(self, board):
-        '''Heuristic function to choose the player with maximum points.
-        Choose hex with maximum other players, Avoid blocking own resource
-        args: game board object
-        returns: hex index and player to rob
-        '''
-
-        '''
-        # Get list of robber spots
-        robberHexDict = board.get_robber_spots()
-        
-        # Choose a hexTile with maximum adversary settlements
-        maxHexScore = 0 #Keep only the best hex to rob
-        for hex_ind, hexTile in robberHexDict.items():
-            # Extract all 6 vertices of this hexTile
-            vertexList = polygon_corners(board.flat, hexTile.hex)
-
-            hexScore = 0 #Heuristic score for hexTile
-            playerToRob_VP = 0
-            playerToRob = None
-            for vertex in vertexList:
-                playerAtVertex = board.boardGraph[vertex].state['Player']
-                if playerAtVertex == self:
-                    hexScore -= self.victoryPoints
-                elif playerAtVertex != None: #There is an adversary on this vertex
-                    hexScore += playerAtVertex.visibleVictoryPoints
-                    # Find strongest other player at this hex, provided player has resources
-                    if playerAtVertex.visibleVictoryPoints >= playerToRob_VP and sum(playerAtVertex.resources.values()) > 0:
-                        playerToRob_VP = playerAtVertex.visibleVictoryPoints
-                        playerToRob = playerAtVertex
-                else:
-                    pass
-
-            if hexScore >= maxHexScore and playerToRob != None:
-                hexToRob_index = hex_ind
-                playerToRob_hex = playerToRob
-                maxHexScore = hexScore
-
-        return hexToRob_index, playerToRob_hex
-        '''
-
-    def heuristic_move_robber(self, board):
-        '''Function to control heuristic AI robber
-        Calls the choose_player_to_rob and move_robber functions
-        args: board object
-        '''
-
-        '''
-        # Get the best hex and player to rob
-        hex_i, playerRobbed = self.choose_player_to_rob(board)
-
-        # Move the robber
-        self.move_robber(hex_i, board, playerRobbed)
-        '''
-
-        return
 
     def heuristic_play_dev_card(self, board):
         '''Heuristic strategies to choose and play a dev card
@@ -740,9 +746,13 @@ class dylanAIPlayer(player):
 
         return resourcesNeededDict
 
-    def heuristic_discard(self):
-        '''Function for the AI to choose a set of cards to discard upon rolling a 7
+    def discard_cards(self):
         '''
+        Function for the AI to choose a set of cards to discard upon rolling a 7
+        '''
+
+        # TODO
+
         return
 
     # Function to propose a trade -> give r1 and get r2

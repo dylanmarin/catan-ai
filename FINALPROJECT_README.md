@@ -1,25 +1,28 @@
 # TODO
 
 NEXT:
-
 making moves on your turn
-resource synergy of a settlement
 
 todo:
 HIGH:
 making moves
 
-
 MEDIUM: 
 AI discarding resources
+resource synergy of a settlement
 Fix drawing in between placing settlements. something is up
 
 LOW:
+Fallback for if none of our logical options for placing the robber works
+Deciding not to play a robber when blocked
 Counting resources in bank before dealing out cards
 Bayesian inference on unplayed cards
 
 
 COMPLETED:
+
+4/10
+- finish robber placement function
 
 4/9:
 - initial road placement (naively in direction of next desired settlement)

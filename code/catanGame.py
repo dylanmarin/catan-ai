@@ -78,7 +78,9 @@ class catanGame():
             self.playerQueue.put(test_AI_player)
 
         for i in range(self.numPlayers - self.numAIPlayers):
-            playerNameInput = input("Enter Player {} name: ".format(i+1))
+            # TODO take player input again
+            # playerNameInput = input("Enter Player {} name: ".format(i+1))
+            playerNameInput = "player{}".format(i)
             newPlayer = player(playerNameInput, playerColors[i+(self.numAIPlayers)], self.maxPoints)
             self.playerQueue.put(newPlayer)
 
@@ -247,14 +249,14 @@ class catanGame():
                 if (currentPlayer.isAI):
                     print("AI discarding resources...")
                     # TODO AI HAS TO CHOOSE WHICH CARDS TO DISCARD
+                    player_i.discard_cards()
                 else:
                     # Player must discard resources
                     player_i.discardResources()
 
             # Logic for robber
             if (currentPlayer.isAI):
-                print("AI using heuristic robber...")
-                currentPlayer.heuristic_move_robber(self.board)
+                currentPlayer.place_robber(self.board)
             else:
                 self.robber(currentPlayer)
                 self.boardView.displayGameScreen()  # Update back to original gamescreen
