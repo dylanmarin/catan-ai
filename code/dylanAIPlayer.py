@@ -4,6 +4,7 @@
 from board import *
 from player import *
 import numpy as np
+import copy
 
 # Class definition for an AI player
 
@@ -12,7 +13,7 @@ class dylanAIPlayer(player):
 
     # Update AI player flag and resources
     # DYLAN: Added params to give initial preference to different resources
-    def updateAI(self, game, ore=4, brick=4, wheat=4, wood=4, sheep=4, port_desire=0.85, resource_diversity_desire=0.6):
+    def updateAI(self, game, ore=4, brick=4, wheat=4, wood=4, sheep=4, port_desire=50.85, resource_diversity_desire=0.6):
         self.isAI = True
 
         # Initialize resources with just correct number needed for set up (2 settlements and 2 road)
@@ -132,7 +133,6 @@ class dylanAIPlayer(player):
             print("Rating of settlement: {}".format(total_rating))
 
         return total_rating
-
 
     def evaluateOpponentSettlement(self, board, settlement_location):
         '''
@@ -504,13 +504,51 @@ class dylanAIPlayer(player):
         '''
 
         # we may have already played a knight before rolling
+        # may have rolled a 7 and moved the robber AND discarded cards
 
         # (takes into account if we have already played a knight)
         if self.should_play_knight_after_rolling(board):
             # NOTE: does not take into account whether waiting to play another dev card is better
             self.place_robber(board)
 
+        moves_made = 0
 
+        able_to_do_something = True
+        while able_to_do_something:
+            # while we are aeble to do something
+            goals = self.get_move_goals().keys()
+            goals.sort(
+                reverse=True, key=lambda goal: self.get_move_goals()[goal])
+
+            for option in goals:
+
+                if self.able_to_do(option):
+                    # TODO: do it
+                    self.make_move(option)
+
+                    # anytime we do an option, we do it and go back to top of loop
+                    moves_made += 1
+                    able_to_do_something = True
+                    break
+                elif self.able_to_trade_for(option):
+                    # TODO:
+                    self.make_said_trades()
+
+                    # do it
+                    self.make_move(option)
+
+                    # anytime we do an option, we do it and go back to top of loop
+                    moves_made += 1
+                    able_to_do_something = True
+                    break
+
+                else:
+                    # if we have gone through all options without doing anything, we don't need to loop again
+                    able_to_do_something = False
+
+        if moves_made == 0:
+            # try trading with players?? maybe? and then try making moves again
+            return
 
         '''
         # Trade resources if there are excessive amounts of a particular resource
@@ -541,6 +579,252 @@ class dylanAIPlayer(player):
         '''
         return
 
+    def get_move_goals(self):
+        '''
+        This function will assign a "desire" rating for each of the 5 options. It does not take into account whether they are possible or not.
+        '''
+        goals = {"ROAD": 0, "SETTLEMENT": 0,
+                 "CITY": 0, "BUY_DEV": 0, "PLAY_DEV": 0}
+
+        goals["ROAD"] = self.get_road_desire()
+        goals["SETTLEMENT"] = self.get_settlement_desire()
+        goals["CITY"] = self.get_city_desire()
+        goals["BUY_DEV"] = self.get_buy_dev_desire()
+        goals["PLAY_DEV"] = self.get_play_dev_desire()
+
+        return goals
+
+    def able_to_do(self, option):
+        if option == "ROAD":
+            return self.can_buy_road()
+        elif option == "SETTLEMENT":
+            return self.can_buy_settlement()
+        elif option == "CITY":
+            return self.can_buy_city()
+        elif option == "BUY_DEV":
+            return self.can_buy_dev_card()
+        elif option == "PLAY_DEV":
+            #shouldnt be reached
+            return True
+
+
+    def able_to_trade_for(self, option):
+        #TODO
+        #TODO
+        #TODO
+        #TODO
+        #TODO
+        #TODO
+        if option == "ROAD":
+            return self.can_get_resources_through_trading({})
+        elif option == "SETTLEMENT":
+            return self.can_get_resources_through_trading({})
+        elif option == "CITY":
+            return self.can_get_resources_through_trading({})
+        elif option == "BUY_DEV":
+            return self.can_get_resources_through_trading({})
+        elif option == "PLAY_DEV":
+            #shouldnt be reached
+            return True
+
+
+            
+
+
+    '''
+    "desire"/utility functions. main goals for these is that they do the best thing when it is obvious. DONT BE STUPID!
+    '''
+
+    def get_road_desire(self):
+        '''
+        roads are desired if we have 0 possible settlement spots.
+
+        roads are desired if we are tied for longest road
+
+        roads are desired if we dont have longest road and it would give us the win
+
+        roads are desired 
+        '''
+        utility = 0
+
+        return utility
+
+    def get_settlement_desire(self):
+        '''
+        we dont care to settle if we have no spots. (we do want to settle even if we dont have resources, though)
+
+        a settlement is approximately as valuable as the production it provides. use evaluate function on settlements that we could possibly build
+
+        we max out utility if we are 1 VP from winning
+        '''
+        utility = 0
+
+        return utility
+
+    def get_city_desire(self):
+        '''
+        a city is as useful as the production it provides. we can evaluate it as if it was another settlement in the same spot as an existing one
+
+        we max out utility if we are 1 VP from winning
+        '''
+        utility = 0
+
+        return utility
+
+    def get_buy_dev_desire(self):
+        '''
+        dev card should be somewhere in the middle. we kind of want to buy dev cards only if our production matches it well, 
+        but we dont want to buy dev cards if it will ruin our other stuff
+        '''
+        utility = 0
+
+        return utility
+
+    def get_play_dev_desire(self):
+        '''
+
+        dont have to account for knights because they would've been played sooner
+
+        road building is good if we currently want to build roads
+
+        monopoly is good if we think/know there are a lot of cards out there. it is even better if we have a relevant port
+
+        year of plenty is good if we need 2 cards for our favorite action
+
+        overall utility = max of those 3 ratings
+        '''
+        utility = 0
+
+        return utility
+
+    '''
+    helper functions to tell us if we can do something
+    '''
+
+    def can_buy_road(self):
+        return self.resources["BRICK"] > 0 and self.resources["WOOD"] > 0
+
+    def can_buy_settlement(self):
+        return self.resources["BRICK"] > 0 and self.resources["WOOD"] > 0 and self.resources["SHEEP"] > 0 and self.resources["WHEAT"] > 0
+
+    def can_buy_city(self):
+        return self.resources["WHEAT"] >= 2 and self.resources["ORE"] >= 3
+
+    def can_buy_dev_card(self):
+        return self.resources["ORE"] > 0 and self.resources["SHEEP"] > 0 and self.resources["WHEAT"] > 0
+
+    def can_play_dev_card(self):
+        return sum(self.devCards.values()) > 0 and not self.devCardPlayedThisTurn
+
+    def can_get_resources_through_trading(self, desired_resources):
+        '''
+        desired resources is a dict from resource string to amount desired
+
+        function checks if through 4:1, 3:1, 2:1 trading it can reach the desired resources
+        '''
+
+        debug = True
+
+        theoretical_resources = copy.deepcopy(self.resources)
+
+        # for each resource
+        for resource in desired_resources.keys():
+            theoretical_resources[resource] -= desired_resources[resource]
+
+        # while we can't pay for it
+        while not all(theoretical_resources[resource] >= 0 for resource in theoretical_resources):
+            if debug:
+                print(theoretical_resources)
+
+            has_traded = False
+
+            # try all ports
+            for port in self.portList:
+
+                # if we have a 2:1 port
+                if port[:3] == "2:1":
+                    port_resource_type = port[4:]
+                    if debug:
+                        print("Checking 2:1 {} options...".format(
+                            port_resource_type))
+
+                    # if we have 2 of the item
+                    if theoretical_resources[port_resource_type] >= 2:
+
+                        # hypothetically make the trade
+                        theoretical_resources[port_resource_type] -= 2
+
+                        for resource in theoretical_resources:
+                            if theoretical_resources[resource] < 0:
+                                theoretical_resources[resource] += 1
+
+                                # only do it once
+                                has_traded = True
+                                break
+
+                        # break to top of while loop if we did make a trade
+                        break
+
+                if port[:3] == "3:1":
+                    if debug:
+                        print("Checking 3:1 options...")
+                    # go through each resource
+                    for trade_resource in theoretical_resources:
+
+                        # if we have 3 of the item
+                        if theoretical_resources[trade_resource] >= 3:
+
+                            # hypothetically make the trade
+                            theoretical_resources[trade_resource] -= 3
+
+                            # add it to whatever we still need
+                            for resource in theoretical_resources:
+                                if theoretical_resources[resource] < 0:
+                                    theoretical_resources[resource] += 1
+
+                                    # only do it once
+                                    has_traded = True
+                                    break
+
+                            # break to top of while loop if we did make a theoretical trade
+                            break
+
+            if has_traded:
+                continue
+
+            # no port, so try 4:1
+
+            # go through each resource
+            for trade_resource in theoretical_resources:
+                if debug:
+                    print("Checking 4:1 for {} options...".format(trade_resource))
+
+                # if we have 4 of the item
+                if theoretical_resources[trade_resource] >= 4:
+
+                    # hypothetically make the trade
+                    theoretical_resources[trade_resource] -= 4
+
+                    # add it to whatever we still need
+                    for resource in theoretical_resources:
+                        if theoretical_resources[resource] < 0:
+                            theoretical_resources[resource] += 1
+
+                            # only do it once
+                            has_traded = True
+                            break
+
+                    # break to top of while loop if we did make a trade
+                    break
+
+            if has_traded:
+                continue
+
+            # if we ever go through the loop and don't make a trade, we reach here and therefore cannot do it
+            return False
+
+        return True
+
     def should_play_knight_before_rolling(self, board):
         # NOTE: Doesn't take into account value of staying blocked but playing a different dev card later in the turn
 
@@ -548,7 +832,7 @@ class dylanAIPlayer(player):
             return False
 
         # if we are blocked
-        if self.any_settlement_blocked_by_robber(board) :
+        if self.any_settlement_blocked_by_robber(board):
             # if we have exactly 7 cards, then we should usually be fine to play the knight, but
             # sometimes if we play the knight we will get 8 cards and then roll a 7 and have to
             # discard, so we should only do it most of the time
@@ -638,6 +922,10 @@ class dylanAIPlayer(player):
                     settlements = player.buildGraph["SETTLEMENTS"]
 
                     # rate all opponent settlements and sort them
+                    # TODO
+                    # TODO
+                    # TODO
+                    # TODO
                     # TODO: evaluate opponent settlement
                     # settlements.sort(
                     #     reverse=True, key=lambda s: player.evaluateSettlement(board, s))
@@ -649,14 +937,13 @@ class dylanAIPlayer(player):
                         # get all adjacent hexes and sort them in order of production points
                         for adj_hex in board.boardGraph[settlement].adjacentHexList:
 
-
                             # if the hex is adjacent to our settlement, skip it
                             if not self.hex_is_adjacent_to_us(board, adj_hex) and adj_hex in valid_robber_spots:
                                 # otherwise place on the hex with most production
                                 valid_hex_options.append(adj_hex)
 
-
-                        valid_hex_options.sort(reverse=True, key= lambda h : self.production_points_for_hex(board, h))
+                        valid_hex_options.sort(
+                            reverse=True, key=lambda h: self.production_points_for_hex(board, h))
 
                         for option in valid_hex_options:
                             self.move_robber(option, board, player)
@@ -684,68 +971,7 @@ class dylanAIPlayer(player):
                     return True
         return False
 
-    
-
-    # Wrapper function to control all trading
-
-    def trade(self):
-        '''
-        for r1, r1_amount in self.resources.items():
-            if(r1_amount >= 6): #heuristic to trade if a player has more than 5 of a particular resource
-                for r2, r2_amount in self.resources.items():
-                    if(r2_amount < 1):
-                        self.trade_with_bank(r1, r2)
-                        break
-        '''
-
-    def heuristic_play_dev_card(self, board):
-        '''Heuristic strategies to choose and play a dev card
-        args: board object
-        '''
-
-        '''
-        # Check if player can play a devCard this turn
-        if self.devCardPlayedThisTurn != True:
-            # Get a list of all the unique dev cards this player can play
-            devCardsAvailable = []
-            for cardName, cardAmount in self.devCards.items():
-                if(cardName != 'VP' and cardAmount >= 1): #Exclude Victory points
-                    devCardsAvailable.append((cardName, cardAmount))
-
-            if(len(devCardsAvailable) >=1):
-    #             If a hexTile is currently blocked, try and play a Knight
-
-    #             If expansion needed, try road-builder
-
-    #             If resources needed, try monopoly or year of plenty
-        '''
-
-    def resources_needed_for_settlement(self):
-        '''Function to return the resources needed for a settlement
-        args: player object - use self.resources
-        returns: list of resources needed for a settlement
-        '''
-        resourcesNeededDict = {}
-        for resourceName in self.resources.keys():
-            if resourceName != 'ORE' and self.resources[resourceName] == 0:
-                resourcesNeededDict[resourceName] = 1
-
-        return resourcesNeededDict
-
-    def resources_needed_for_city(self):
-        '''Function to return the resources needed for a city
-        args: player object - use self.resources
-        returns: list of resources needed for a city
-        '''
-        resourcesNeededDict = {}
-        if self.resources['ORE'] < 3:
-            resourcesNeededDict['ORE'] = 3 - self.resources['ORE']
-
-        if self.resources['WHEAT'] < 2:
-            resourcesNeededDict['ORE'] = 2 - self.resources['WHEAT']
-
-        return resourcesNeededDict
-
+    # Wrapper func
     def discard_cards(self):
         '''
         Function for the AI to choose a set of cards to discard upon rolling a 7
@@ -761,12 +987,3 @@ class dylanAIPlayer(player):
 
     # Function to accept/reject trade - return True if accept
     # def accept_trade(self, r1_dict, r2_dict):
-
-    # Function to find best action - based on gamestate
-
-    def get_action(self):
-        return
-
-    # Function to execute the player's action
-    def execute_action(self):
-        return

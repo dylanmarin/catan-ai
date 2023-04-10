@@ -8,6 +8,7 @@ HIGH:
 making moves
 
 MEDIUM: 
+evaluate opponent settlement and put it in robber placement
 AI discarding resources
 resource synergy of a settlement
 Fix drawing in between placing settlements. something is up
@@ -23,6 +24,8 @@ COMPLETED:
 
 4/10
 - finish robber placement function
+- function for checking if it is possible to get resource through trading with bank/ports
+- outline of goal utility function
 
 4/9:
 - initial road placement (naively in direction of next desired settlement)
