@@ -190,6 +190,12 @@ class player():
         for resourceName, resourceAmount in player_2.resources.items():
             p2_resources += [resourceName]*resourceAmount
 
+        # DYLAN: Code breaks if trying to steal from a player with 0 resources.
+        if len(p2_resources) == 0:
+            print("Player {} had no resources, so nothing was stolen".format(
+                player_2.name))
+            return
+
         resourceIndexToSteal = np.random.randint(0, len(p2_resources))
 
         # Get a random permutation and steal a card
@@ -376,7 +382,11 @@ class player():
 
         devCardNumber = -1
         while (devCardNumber not in devCard_dict.keys()):
-            devCardNumber = int(input("Enter Dev card number to play:"))
+            # DYLAN: adjust code so that it doesnt break the game if you type in the wrong number
+            try:
+                devCardNumber = int(input("Enter Dev card number to play:"))
+            except:
+                print("Please input a valid index")
 
         # Play the devCard and update player's dev cards
         devCardPlayed = devCard_dict[devCardNumber]

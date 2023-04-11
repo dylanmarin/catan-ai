@@ -25,6 +25,15 @@ class catanGame():
         self.numPlayers = 0
         self.numAIPlayers = -1
 
+        while (self.numPlayers not in [1, 2, 3]):
+            try:
+                self.numPlayers = int(
+                    input("Enter Number of AI opponents (1, 2, or 3): "))
+            except:
+                print("Please input a valid number")
+
+        '''
+
         while (self.numPlayers not in [1, 2, 3, 4]):
             try:
                 self.numPlayers = int(
@@ -38,8 +47,9 @@ class catanGame():
                     input("Enter Number of AI players. {} at most: ".format(self.numPlayers)))
             except:
                 print("Please input a valid number")
+        '''
 
-        print("Initializing game with {} players...".format(self.numPlayers))
+        print("Initializing game with {} players...".format(self.numPlayers + 1))
         print("Note that Player 1 goes first, Player 2 second and so forth.")
 
         # Initialize blank player queue and initial set up of roads + settlements
@@ -73,14 +83,14 @@ class catanGame():
         # add in AI players first
         for i in range(self.numAIPlayers):
             test_AI_player = dylanAIPlayer(
-                'ai{}'.format(i+1), playerColors[i], self.maxPoints)
+                'AI-{}'.format(i+1), playerColors[i], self.maxPoints)
             test_AI_player.updateAI(self)
             self.playerQueue.put(test_AI_player)
 
         for i in range(self.numPlayers - self.numAIPlayers):
             # TODO take player input again
             # playerNameInput = input("Enter Player {} name: ".format(i+1))
-            playerNameInput = "player{}".format(i)
+            playerNameInput = "Player-{}".format(i + 1)
             newPlayer = player(playerNameInput, playerColors[i+(self.numAIPlayers)], self.maxPoints)
             self.playerQueue.put(newPlayer)
 
@@ -246,10 +256,9 @@ class catanGame():
             # Implement discarding cards
             # Check for each player
             for player_i in list(self.playerQueue.queue):
-                if (currentPlayer.isAI):
-                    print("AI discarding resources...")
-                    # TODO AI HAS TO CHOOSE WHICH CARDS TO DISCARD
-                    player_i.discard_cards()
+                if (player_i.isAI):
+                    player_i.discard_cards(self.board)
+
                 else:
                     # Player must discard resources
                     player_i.discardResources()
@@ -339,7 +348,8 @@ class catanGame():
 
                         # check if AI wants to play a knight before rolling
                         if currPlayer.should_play_knight_before_rolling(self.board):
-                            currPlayer.place_robber(self.board)
+                            print("{} is playing a knight".format(currPlayer.name))
+                            currPlayer.play_knight(self.board)
 
                         # roll Dice
                         diceNum = self.rollDice()
