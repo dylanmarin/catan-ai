@@ -537,8 +537,13 @@ class player():
             # Specify quantity to trade
             resource_traded_amount = 0
             while (resource_traded_amount > self.resources[resourceToTrade]) or (resource_traded_amount < 1):
-                resource_traded_amount = int(input("Enter quantity of {} to trade with player {}:".format(
-                    resourceToTrade, playerToTrade_name)))
+                # DYLAN: Added try catch to not break in trading menu
+                try:
+                    resource_traded_amount = int(input("Enter quantity of {} to trade with player {}:".format(
+                        resourceToTrade, playerToTrade_name)))
+                except:
+                    print("Please input a valid amount")
+
 
             # Player to select resource to receive - disallow receiving same resource as traded
             resourceToReceive = ""
@@ -554,8 +559,12 @@ class player():
             # Specify quantity to receive
             resource_received_amount = 0
             while (resource_received_amount > playerToTrade.resources[resourceToReceive]) or (resource_received_amount < 1):
-                resource_received_amount = int(input("Enter quantity of {} to receive from player {}:".format(
-                    resourceToReceive, playerToTrade_name)))
+                # DYLAN: Added try catch to not break in trading menu
+                try:
+                    resource_received_amount = int(input("Enter quantity of {} to receive from player {}:".format(
+                        resourceToReceive, playerToTrade_name)))
+                except:
+                    print("Please input a valid amount")
 
             # Execute trade - player gives resource traded and gains resource received
             self.resources[resourceToReceive] += resource_received_amount

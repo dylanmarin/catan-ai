@@ -5,6 +5,7 @@ from board import *
 from player import *
 import numpy as np
 import copy
+import time
 
 # Class definition for an AI player
 
@@ -13,15 +14,15 @@ class dylanAIPlayer(player):
 
     # Update AI player flag and resources
     # DYLAN: Added params to give initial preference to different resources
-    def updateAI(self, game, ore=4, brick=4, wheat=4, wood=4, sheep=4, port_desire=0.85, resource_diversity_desire=0.6):
+    def updateAI(self, game, ore=1, brick=5, wheat=2, wood=5, sheep=1, port_desire=0.85, resource_diversity_desire=0.6):
         self.isAI = True
 
         # Initialize resources with just correct number needed for set up (2 settlements and 2 road)
         # Dictionary that keeps track of resource amounts
         self.resources = {'ORE': 0, 'BRICK': 4,
                           'WHEAT': 2, 'WOOD': 4, 'SHEEP': 2}
-        # self.resources = {'ORE': 2, 'BRICK': 4,
-        #                   'WHEAT': 4, 'WOOD': 4, 'SHEEP': 4}
+        # self.resources = {'ORE': 2, 'BRICK': 100,
+        #                   'WHEAT': 4, 'WOOD': 100, 'SHEEP': 4}
 
         # DYLAN: Moved their diceRoll_expectation dict into a class var
         self.diceRoll_expectation = {2: 1, 3: 2, 4: 3, 5: 4,
@@ -73,15 +74,20 @@ class dylanAIPlayer(player):
         self.build_settlement(best_placement, board)
 
         # 3 roads next to current
-        best_road = self.pick_setup_road(board)
-        self.build_road(best_road[0], best_road[1], board)
+        # best_road = self.pick_setup_road(board)
+        # self.build_road(best_road[0], best_road[1], board)
+
+        self.place_best_road(board, setup=True)
+
 
     # DYLAN: Added evaluate settlement function
 
-    def get_best_setup_settlement(self, board):
+    def get_best_setup_settlement(self, board, exclude=[]):
         possible_placements = {}
         for placement in board.get_setup_settlements(self).keys():
-            possible_placements[placement] = 0
+            # if we want to exclude it, dont add it
+            if placement not in exclude:
+                possible_placements[placement] = 0
 
         for p in possible_placements.keys():
             possible_placements[p] = self.evaluateSettlement(board, p)
@@ -188,7 +194,11 @@ class dylanAIPlayer(player):
         debug = False
 
         total_value = 0
-
+        
+        # if we already have the port, it doesn't provide additional value
+        if port in self.portList:
+            return total_value
+        
         # if it is a 2:1 port
         if port[:3] == "2:1":
             port_resource_type = port[4:]
@@ -530,8 +540,7 @@ class dylanAIPlayer(player):
                 if debug:
                     print("{} desire: {}".format(option, move_goals[option]))
 
-                # TODO: remove
-                if option == "PLAY_DEV":
+                if move_goals[option] == 0:
                     continue
 
                 if self.able_to_do(option):
@@ -559,7 +568,7 @@ class dylanAIPlayer(player):
                     break
                 else:
                     # if we have < 7 cards, discard lower rated options that will hinder our current goal
-                    if sum(self.resources.values()) >= 7:
+                    if sum(self.resources.values()) <= 7:
                         if option == "SETTLEMENT":
                             if "ROAD" in options:
                                 options.remove("ROAD")
@@ -697,17 +706,26 @@ class dylanAIPlayer(player):
             self.play_best_dev_card(board)
             return
 
-    def place_best_road(self, board):
+    def place_best_road(self, board, setup=False):
         '''
         two main ways to place road:
             - place to reach a new settlement spot
             - place to get longest road
 
+
+        # TODO: make it also consider roads that explicitly increase the length
         '''
         print("AI BUILDING ROAD...")
 
+
+        '''
+        # dont consider spots that we already have roads to
+        already_reached_settlement_spots = board.get_potential_settlements(
+            self)
+
         # building for a new settlement spot
-        destination_settlement = self.get_best_setup_settlement(board)
+        destination_settlement = self.get_best_setup_settlement(
+            board, exclude=already_reached_settlement_spots)
 
         possible_roads = board.get_potential_roads(self)
         min_dist = 99999
@@ -725,8 +743,260 @@ class dylanAIPlayer(player):
                 best_road = road
                 min_dist = dist_to_closer_endpoint
 
+        '''
+        possible_roads = board.get_potential_roads(self)
+
+        if setup:
+            possible_roads = board.get_setup_roads(self)
+
+        best_road = max(possible_roads, key= lambda road : self.evaluateRoad(board, road, setup=setup))
+
         self.build_road(best_road[0], best_road[1], board)
         return
+
+    def evaluateRoad(self, board, road, debug=False, setup=False):
+        '''
+        function to evaluate roads
+
+
+        if it gives us longest road, apply some utility
+            if it would give us longest road for the win, apply MAX utility
+
+        if it is within 2 roads of giving us largest road, apply 1/2 the amount
+
+        if it allows us to settle at a spot, add some utility times/plus the amount of value of the settlement
+
+        if it allows us to build another road that will allow us to settle, do half of the utility times/plus max value of the settlement
+
+        if it is the first of 3 roads towards a settlement, do the above but with 1/3
+
+        if it increases max road length, apply medium amount of utility, close to that of allowing us to settle, but without settlement multiplier
+
+        IMPROVEMNET: cutting off opponents        
+        '''
+
+        utility = 0
+        longest_road_utility = 50.0
+        settlement_base_utility = 5.0
+        increase_max_length_utility = 25.0
+
+        if setup:
+            increase_max_length_utility = 0
+            longest_road_utility = 0
+
+        # new roads that we can build given the current road
+        one_degree_roads = self.get_potential_roads_with(board, [road])
+
+        two_degree_roads = self.get_potential_roads_with(
+            board, one_degree_roads)
+
+        # if we can even take longest road
+        if self.can_take_longest_road():
+            # if this road would do it
+            if self.would_give_us_longest(board, [road]):
+                utility += longest_road_utility
+
+                if debug:
+                    print("Road gives us longest road. Utility {}".format(utility))
+                # if it gives us the win, just max it out
+                if self.max_points - self.victoryPoints <= 2:
+                    utility += 1000
+
+                    if debug:
+                        print("Longest Road would give us the win. Utility {}".format(utility))
+                    return utility
+
+            # if it is possible to do in 2 roads
+            elif self.would_give_us_longest(board, one_degree_roads):
+                utility += longest_road_utility * (0.6666)
+                if debug:
+                    print("Road gives us access to a road that would give us longest road. Utility {}".format(utility))
+
+            # if it is possible to do in 3 roads
+            elif self.would_give_us_longest(board, two_degree_roads):
+                utility += longest_road_utility * (0.3333)
+                if debug:
+                    print("Road gives 3-degree access to longest road. Utility {}".format(utility))
+
+        # settlement spots that we get access to with the given road
+        one_degree_settlement_spots = self.get_potential_settlemnt_spots_with_roads(board, [road])
+
+        # should just be one. a road can only open up one new settlement spot at a time
+        for settlement in one_degree_settlement_spots:
+            utility += settlement_base_utility * \
+                self.evaluateSettlement(board, settlement)
+            if debug:
+                print("Settlement Utility this road gives immediate access to: {}. Utility {}".format(self.evaluateSettlement(board, settlement), utility))
+
+        # exclude 1-degree spots
+        two_degree_settlement_spots = self.get_potential_settlemnt_spots_with_roads(board, one_degree_roads)
+        for settlement in one_degree_settlement_spots:
+            if settlement in two_degree_settlement_spots:
+                two_degree_settlement_spots.remove(settlement)
+
+
+        if len(two_degree_settlement_spots) > 0:
+            best_settlement = max(
+                two_degree_settlement_spots, key=lambda settle: self.evaluateSettlement(board, settle))
+            utility += (0.2) * settlement_base_utility * \
+                self.evaluateSettlement(board, best_settlement)
+            if debug:
+                print("Settlement Utility this road gives 2-degree access to: {}. Utility {}".format(self.evaluateSettlement(board, best_settlement), utility))
+
+
+        # exclude 2-degree spots
+        three_degree_settlement_spots = self.get_potential_settlemnt_spots_with_roads(board, two_degree_roads)
+
+        for settlement in one_degree_settlement_spots + two_degree_settlement_spots:
+            if settlement in three_degree_settlement_spots:
+                three_degree_settlement_spots.remove(settlement)
+
+        if len(three_degree_settlement_spots) > 0:
+            best_settlement = max(three_degree_settlement_spots,
+                                  key=lambda settle: self.evaluateSettlement(board, settle))
+            utility += (0.1) * settlement_base_utility * \
+                self.evaluateSettlement(board, best_settlement)
+            if debug:
+                print("Settlement Utility this road gives 3-degree access to: {}. Utility {}".format(self.evaluateSettlement(board, best_settlement), utility))
+
+        if self.would_increase_max_length(board, road):
+            utility += increase_max_length_utility
+            if debug:
+                print("Road would increase max length. Utility {}".format(utility))
+        if debug:
+            print(one_degree_settlement_spots)
+            print(two_degree_settlement_spots)
+            print(three_degree_settlement_spots)
+            print()
+
+        return utility
+
+    def get_potential_roads_with(self, board, roads):
+        '''
+        given a list of roads, return only the NEW roads that we would be able to place
+        '''
+
+        # double check that we are only using roads that we didnt already build
+        new_roads = []
+        for road in roads:
+            if road not in self.buildGraph["ROADS"]:
+                new_roads.append(road)
+
+        
+        # exclude any roads that we can already build
+        exclude_list = list(board.get_potential_roads(self))
+
+        # add the new roads to our build graph and boardgraph
+        for road in new_roads:
+            self.buildGraph["ROADS"].append(road)
+            board.updateBoardGraph_road(road[0], road[1], self)
+
+        new_potential_roads = list(board.get_potential_roads(self).keys())
+
+        # remove the new roads from our build graph
+        for road in new_roads:
+            self.buildGraph["ROADS"].remove(road)
+            board.remove_road_from_boardGraph(road[0], road[1])
+
+        for road in exclude_list:
+            if road in new_potential_roads:
+                new_potential_roads.remove(road)
+
+        return new_potential_roads
+
+    def would_give_us_longest(self, board, roads):
+        '''
+        given a list of roads, return true if we would take longest road given the roads
+        '''
+        # if we can't take it, no roads would give us longest road
+        if not self.can_take_longest_road():
+            return False
+        
+
+        # double check that we are only using roads that we didnt already build
+        new_roads = []
+        for road in roads:
+            if road not in self.buildGraph["ROADS"]:
+                new_roads.append(road)
+
+        # add the new roads to our build graph and boardgraph
+        for road in new_roads:
+            self.buildGraph["ROADS"].append(road)
+            board.updateBoardGraph_road(road[0], road[1], self)
+
+
+        max_length = self.get_road_length(board)
+
+        could_take_longest = False
+        # has to be at least 5
+        if (max_length >= 5): 
+            could_take_longest = True
+            for player in list(self.game.playerQueue.queue):
+                # if another player has the same or longer length, we dont have longest
+                if (player.maxRoadLength >= max_length and player != self):
+                    could_take_longest = False
+
+        # remove the new roads from our build graph
+        for road in new_roads:
+            self.buildGraph["ROADS"].remove(road)
+            board.remove_road_from_boardGraph(road[0], road[1])
+
+
+        return could_take_longest
+
+    def would_increase_max_length(self, board, road):
+        '''
+        given a road, return true if it increases our max length
+        '''
+        # double check that the road hasn't already been build
+
+        if road in self.buildGraph["ROADS"]:
+            return False
+
+        self.buildGraph["ROADS"].append(road)
+        board.updateBoardGraph_road(road[0], road[1], self)
+
+        max_length = self.get_road_length(board)
+        
+        self.buildGraph["ROADS"].remove(road)
+        board.remove_road_from_boardGraph(road[0], road[1])
+
+        return max_length > self.maxRoadLength
+
+    def get_potential_settlemnt_spots_with_roads(self, board, roads):
+        '''
+        given a list of roads, return a list of settlement spots that we would be able to build at if the given roads were in our build graph
+
+        DO NOT return settlements that are currently possible
+        '''
+        # double check that we are only using roads that we didnt already build
+        new_roads = []
+        for road in roads:
+            if road not in self.buildGraph["ROADS"]:
+                new_roads.append(road)
+
+        
+        # exclude any settlements we can already build
+        exclude_list = list(board.get_potential_settlements(self).keys())
+
+        # add the new roads to our build graph and boardgraph
+        for road in new_roads:
+            self.buildGraph["ROADS"].append(road)
+            board.updateBoardGraph_road(road[0], road[1], self)
+
+
+        new_settlements = list(board.get_potential_settlements(self).keys())
+
+        # remove the new roads from our build graph and boardgraph
+        for road in new_roads:
+            self.buildGraph["ROADS"].remove(road)
+            board.remove_road_from_boardGraph(road[0], road[1])
+
+        for settlement in exclude_list:
+            if settlement in new_settlements:
+                new_settlements.remove(settlement)
+
+        return new_settlements
 
     def place_best_settlement(self, board):
         possible_placements = board.get_potential_settlements(self)
@@ -826,7 +1096,6 @@ class dylanAIPlayer(player):
     '''
     "desire"/utility functions. main goals for these is that they do the best thing when it is obvious. DONT BE STUPID!
     '''
-
     def get_road_desire(self, board):
         '''
         if we have no available SPOTS for roads, it is 0
@@ -841,11 +1110,7 @@ class dylanAIPlayer(player):
         for now, thats it
         '''
         utility = 0
-
-        if (self.roadsLeft == 0):
-            return utility
-
-        if len(board.get_potential_roads(self)) == 0:
+        if (self.roadsLeft == 0) or len(board.get_potential_roads(self)) == 0:
             return utility
 
         # if it would give us the win
@@ -854,6 +1119,9 @@ class dylanAIPlayer(player):
             # using. still greater than other optiosn that aren't game winning though,
             utility = 999
             return utility
+
+        return max(self.evaluateRoad(board, road) for road in board.get_potential_roads(self))
+
 
         if self.maxRoadLength == max(player.maxRoadLength for player in list(self.game.playerQueue.queue)):
             utility += 12
@@ -908,10 +1176,12 @@ class dylanAIPlayer(player):
 
         we max out utility if we are 1 VP from winning
         '''
-        utility = 0
+        # start with base utility because they give us VPs
+        utility = 15
+
 
         if self.settlementsLeft == 0 or len(board.get_potential_settlements(self)) == 0:
-            return utility
+            return 0
 
         # if it would give us the win
         if self.max_points - self.victoryPoints == 1:
@@ -952,7 +1222,7 @@ class dylanAIPlayer(player):
         but we dont want to buy dev cards if it will ruin our other stuff
         '''
         # base medium utility
-        utility = 30
+        utility = 20
 
         # for now thats all
 
@@ -1399,10 +1669,11 @@ class dylanAIPlayer(player):
         goals = self.get_move_goals(board)
         goal = max(goals, key=goals.get)
 
-
         amount_to_discard = int(sum(self.resources.values()) / 2)
 
         if sum(self.resources.values()) > 7:
+            print("\nPlayer {} has {} cards and needs to discard {} cards!".format(
+                self.name, sum(self.resources.values()), amount_to_discard))
             print("{} discarding resources...".format(self.name))
             for i in range(amount_to_discard):
                 self.discard_one_card_with_goal(goal)

@@ -21,7 +21,8 @@ class catanBoard(hexTile, Vertex):
         # DYLAN: Added in np seeding random for testing
 
         # np.random.seed(121112)
-        np.random.seed(125552)
+        # np.random.seed(12512312)
+        np.random.seed(15444412)
 
 
         self.hexTileDict = {} #Dict to store all hextiles, with hexIndex as key
@@ -315,6 +316,23 @@ class catanBoard(hexTile, Vertex):
                 self.boardGraph[v_coord2].edgeState[indx][1] = True
 
         #self.draw_road([v_coord1, v_coord2], player.color) #Draw the settlement
+
+    # DYLAN: added function to remove roads from board graph. this is only used because we add roads
+    # to the board graph to check them in hypothetical situations
+    def remove_road_from_boardGraph(self, v_coord1, v_coord2):
+        #Update edge from first vertex v1
+        for indx, v in enumerate(self.boardGraph[v_coord1].edgeList):
+            if(v == v_coord2):
+                self.boardGraph[v_coord1].edgeState[indx][0] = None
+                self.boardGraph[v_coord1].edgeState[indx][1] = False
+        
+        #Update edge from second vertex v2
+        for indx, v in enumerate(self.boardGraph[v_coord2].edgeList):
+            if(v == v_coord1):
+                self.boardGraph[v_coord2].edgeState[indx][0] = None
+                self.boardGraph[v_coord2].edgeState[indx][1] = False
+
+        return
 
 
     #Function to update boardGraph with settlement on vertex v

@@ -9,6 +9,7 @@ import queue
 import numpy as np
 import sys
 import pygame
+import time
 
 # Catan gameplay class definition
 
@@ -23,16 +24,32 @@ class catanGame():
         self.gameOver = False
         self.maxPoints = 8
         self.numPlayers = 0
+        self.playerPosition = -1
         self.numAIPlayers = -1
+        self.hide_ai_cards = False
+        self.play_without_human = False
 
-        # while (self.numPlayers not in [1, 2, 3]):
-        #     try:
-        #         self.numPlayers = int(
-        #             input("Enter Number of AI opponents (1, 2, or 3): "))
-        #     except:
-        #         print("Please input a valid number")
+        # '''
+        # DYLAN: Adjusted it to take in a number of opponents:
+        while (self.numPlayers not in [1, 2, 3, 4]):
+            try:
+                self.numPlayers = int(
+                    input("Enter Number of AI opponents (1, 2, or 3): ")) + 1
+            except:
+                print("Please input a valid number")
 
+        if not self.play_without_human:
+            while (self.playerPosition not in list(range(self.numPlayers))):
+                try:
+                    self.playerPosition = int(
+                        input("Enter position [1-{}]: ".format(self.numPlayers))) - 1
+                except:
+                    print("Please input a valid number")
+        else:
+            self.numPlayers -= 1
+        # '''
 
+        '''
         while (self.numPlayers not in [1, 2, 3, 4]):
             try:
                 self.numPlayers = int(
@@ -46,9 +63,9 @@ class catanGame():
                     input("Enter Number of AI players. {} at most: ".format(self.numPlayers)))
             except:
                 print("Please input a valid number")
+        '''
 
-
-        print("Initializing game with {} players...".format(self.numPlayers + 1))
+        print("Initializing game with {} players...".format(self.numPlayers))
         print("Note that Player 1 goes first, Player 2 second and so forth.")
 
         # Initialize blank player queue and initial set up of roads + settlements
@@ -79,6 +96,29 @@ class catanGame():
 
         '''
 
+        # '''
+        for i in range(self.numPlayers):
+            
+
+            if i == self.playerPosition:
+                # TODO take player input again
+                # playerNameInput = input("Enter Player {} name: ".format(i+1))
+                playerNameInput = "Player-{}".format(i + 1)
+                print("Added new Player: {}".format(playerNameInput))
+                newPlayer = player(
+                    playerNameInput, playerColors[i], self.maxPoints)
+                self.playerQueue.put(newPlayer)
+            else: 
+                # add AI player
+                test_AI_player = dylanAIPlayer(
+                    'AI-{}'.format(i+1), playerColors[i], self.maxPoints)
+                test_AI_player.updateAI(self)
+                self.playerQueue.put(test_AI_player)
+        # '''
+
+
+
+        '''
         # add in AI players first
         for i in range(self.numAIPlayers):
             test_AI_player = dylanAIPlayer(
@@ -92,22 +132,6 @@ class catanGame():
             playerNameInput = "Player-{}".format(i + 1)
             newPlayer = player(playerNameInput, playerColors[i+(self.numAIPlayers)], self.maxPoints)
             self.playerQueue.put(newPlayer)
-
-        '''
-        code to add real players first
-
-        for i in range(self.numPlayers - self.numAIPlayers):
-            playerNameInput = input("Enter Player {} name: ".format(i+1))
-            newPlayer = player(playerNameInput, playerColors[i])
-            self.playerQueue.put(newPlayer)
-
-        # NOTE: this is where AI players are added
-        for i in range(self.numAIPlayers):
-            test_AI_player = dylanAIPlayer(
-                'ai{}'.format(i+1), playerColors[i+(self.numPlayers - self.numAIPlayers)])
-            test_AI_player.updateAI()
-            self.playerQueue.put(test_AI_player)
-
         '''
 
         playerList = list(self.playerQueue.queue)
@@ -135,7 +159,7 @@ class catanGame():
             if (player_i.isAI):
                 player_i.initial_setup(self.board)
                 self.boardView.displayGameScreen()
-                pygame.display.update() 
+                pygame.display.update()
 
             else:
                 self.build(player_i, 'SETTLE')
@@ -170,7 +194,8 @@ class catanGame():
             roadToBuild = self.boardView.buildRoad_display(
                 player, potentialRoadDict)
             if (roadToBuild != None):
-                player.build_road(roadToBuild[0], roadToBuild[1], self.board, road_builder=True)
+                player.build_road(
+                    roadToBuild[0], roadToBuild[1], self.board, road_builder=road_builder)
 
         if (build_flag == 'SETTLE'):  # Show screen with potential settlements
             if (self.gameSetup):
@@ -221,7 +246,8 @@ class catanGame():
             #print('Resources rolled this turn:', hexResourcesRolled)
 
             # Check for each player
-            for player_i in list(self.playerQueue.queue):
+            for i in range(self.numPlayers): 
+                player_i = list(self.playerQueue.queue)[i]
                 # Check each settlement the player has
                 for settlementCoord in player_i.buildGraph['SETTLEMENTS']:
                     # check each adjacent hex to a settlement
@@ -244,12 +270,22 @@ class catanGame():
                             print("{} collects 2 {} from City".format(
                                 player_i.name, resourceGenerated))
 
-                print("Player:{}, Resources:{}, Points: {}".format(
-                    player_i.name, player_i.resources, player_i.victoryPoints))
-                #print('Dev Cards:{}'.format(player_i.devCards))
-                #print("RoadsLeft:{}, SettlementsLeft:{}, CitiesLeft:{}".format(player_i.roadsLeft, player_i.settlementsLeft, player_i.citiesLeft))
-                print('MaxRoadLength:{}, LongestRoad:{}\n'.format(
-                    player_i.maxRoadLength, player_i.longestRoadFlag))
+                # DYLAN UPDATING PRINTING TO HIDE OPPONENT CARDS
+                if not self.hide_ai_cards or i == self.playerPosition:
+                    print("{}:, Resources:{}, Points: {}".format(
+                        player_i.name, player_i.resources, player_i.victoryPoints))
+                    print('Dev Cards:{}'.format(player_i.devCards))
+                    print("RoadsLeft:{}, SettlementsLeft:{}, CitiesLeft:{}".format(player_i.roadsLeft, player_i.settlementsLeft, player_i.citiesLeft))
+                    print('MaxRoadLength:{}, LongestRoad:{}\n'.format(
+                        player_i.maxRoadLength, player_i.longestRoadFlag))
+                else:
+                    # hiding cards and not ourself
+                    print("{}:, Points: {}".format(
+                        player_i.name, player_i.visibleVictoryPoints))
+                    #print('Dev Cards:{}'.format(player_i.devCards))
+                    #print("RoadsLeft:{}, SettlementsLeft:{}, CitiesLeft:{}".format(player_i.roadsLeft, player_i.settlementsLeft, player_i.citiesLeft))
+                    print('MaxRoadLength:{}, LongestRoad:{}, LargestArmy:{}\n'.format(
+                        player_i.maxRoadLength, player_i.longestRoadFlag, player_i.largestArmyFlag))
 
         # Logic for a 7 roll
         else:
@@ -269,6 +305,8 @@ class catanGame():
             else:
                 self.robber(currentPlayer)
                 self.boardView.displayGameScreen()  # Update back to original gamescreen
+            print("Player:{}, Resources:{}, Points: {}".format(
+                currentPlayer.name, currentPlayer.resources, currentPlayer.victoryPoints))
 
     # function to check if a player has the longest road - after building latest road
 
@@ -348,7 +386,8 @@ class catanGame():
 
                         # check if AI wants to play a knight before rolling
                         if currPlayer.should_play_knight_before_rolling(self.board):
-                            print("{} is playing a knight".format(currPlayer.name))
+                            print("{} is playing a knight".format(
+                                currPlayer.name))
                             currPlayer.play_knight(self.board)
 
                         # roll Dice
@@ -466,6 +505,8 @@ class catanGame():
                                         print("Ending Turn!")
                                         turnOver = True  # Update flag to nextplayer turn
 
+                    if self.play_without_human:
+                        time.sleep(1)
                     # Update the display
                     # self.displayGameScreen(None, None)
                     pygame.display.update()
@@ -493,7 +534,7 @@ newGame = catanGame()
 newGame.playCatan()
 
 for i in range(99999999999):
-    a=1
+    a = 1
 # while (True):
 #     newGame.boardView.displayGameScreen()
 #     pygame.display.update()
