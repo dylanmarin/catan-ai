@@ -25,14 +25,13 @@ class catanGame():
         self.numPlayers = 0
         self.numAIPlayers = -1
 
-        while (self.numPlayers not in [1, 2, 3]):
-            try:
-                self.numPlayers = int(
-                    input("Enter Number of AI opponents (1, 2, or 3): "))
-            except:
-                print("Please input a valid number")
+        # while (self.numPlayers not in [1, 2, 3]):
+        #     try:
+        #         self.numPlayers = int(
+        #             input("Enter Number of AI opponents (1, 2, or 3): "))
+        #     except:
+        #         print("Please input a valid number")
 
-        '''
 
         while (self.numPlayers not in [1, 2, 3, 4]):
             try:
@@ -47,7 +46,7 @@ class catanGame():
                     input("Enter Number of AI players. {} at most: ".format(self.numPlayers)))
             except:
                 print("Please input a valid number")
-        '''
+
 
         print("Initializing game with {} players...".format(self.numPlayers + 1))
         print("Note that Player 1 goes first, Player 2 second and so forth.")
@@ -160,7 +159,8 @@ class catanGame():
 
     # Generic function to handle all building in the game - interface with gameView
 
-    def build(self, player, build_flag):
+    # DYLAN: added raodbuilder flag because currently it still tries to use resources to
+    def build(self, player, build_flag, road_builder=False):
         if (build_flag == 'ROAD'):  # Show screen with potential roads
             if (self.gameSetup):
                 potentialRoadDict = self.board.get_setup_roads(player)
@@ -170,7 +170,7 @@ class catanGame():
             roadToBuild = self.boardView.buildRoad_display(
                 player, potentialRoadDict)
             if (roadToBuild != None):
-                player.build_road(roadToBuild[0], roadToBuild[1], self.board)
+                player.build_road(roadToBuild[0], roadToBuild[1], self.board, road_builder=True)
 
         if (build_flag == 'SETTLE'):  # Show screen with potential settlements
             if (self.gameSetup):

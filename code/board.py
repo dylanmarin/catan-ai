@@ -20,7 +20,8 @@ class catanBoard(hexTile, Vertex):
     def __init__(self):
         # DYLAN: Added in np seeding random for testing
 
-        np.random.seed(121112)
+        # np.random.seed(121112)
+        np.random.seed(125552)
 
 
         self.hexTileDict = {} #Dict to store all hextiles, with hexIndex as key

@@ -504,7 +504,7 @@ class dylanAIPlayer(player):
                 see if porting or trading with bank allows us to do it
 
         '''
-        debug = False
+        debug = True
         # we may have already played a knight before rolling
         # may have rolled a 7 and moved the robber AND discarded cards
 
@@ -570,7 +570,7 @@ class dylanAIPlayer(player):
                                 options.remove("BUY_DEV")
 
                     # while we 7+ cards, trade towards our highest rated option
-                    while sum(self.resources.values()) >= 7:
+                    while sum(self.resources.values()) > 7:
                         if debug:
                             print("{} has {} cards, so it will attempt to trade for {}".format(
                                 self.name, sum(self.resources.values()), option))

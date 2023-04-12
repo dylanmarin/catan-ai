@@ -52,18 +52,20 @@ class player():
 
     # function to build a road from vertex v1 to vertex v2
 
-    def build_road(self, v1, v2, board):
+    # DYLAN: added roadbuilder flag to not charge for materials
+    def build_road(self, v1, v2, board, road_builder=False):
         'Update buildGraph to add a road on edge v1 - v2'
 
         # Check if player has resources available
-        if (self.resources['BRICK'] > 0 and self.resources['WOOD'] > 0):
+        if (self.resources['BRICK'] > 0 and self.resources['WOOD'] > 0) or road_builder:
             if (self.roadsLeft > 0):  # Check if player has roads left
                 self.buildGraph['ROADS'].append((v1, v2))
                 self.roadsLeft -= 1
 
-                # Update player resources
-                self.resources['BRICK'] -= 1
-                self.resources['WOOD'] -= 1
+                if not road_builder:
+                    # Update player resources
+                    self.resources['BRICK'] -= 1
+                    self.resources['WOOD'] -= 1
 
                 # update the overall boardGraph
                 board.updateBoardGraph_road(v1, v2, self)
