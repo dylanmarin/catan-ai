@@ -142,53 +142,6 @@ class dylanAIPlayer(player):
 
         return total_rating
 
-    def evaluateOpponentSettlement(self, board, settlement_location):
-        '''
-        multiply production by desire for that production
-
-        add rating of ports usable by this our current settlements in addition to this
-        hypothetical settlement to the rating
-
-        use self.resource_diversity_desire to scale our desire for resource diversity
-
-        '''
-
-        debug = False
-
-        total_rating = 0
-
-        # Evaluate based on production points of surrounding hexes
-
-        # for each resource type
-        for resourceType in self.resourcePreferences.keys():
-            # add the production points of that resource for this settlement to the rating
-
-            production_points = self.getProductionPointsForSettlement(
-                board, resourceType, settlement_location)
-
-            total_rating += production_points * \
-                self.resourcePreferences[resourceType]
-
-            # if this settlement produces resourceType
-            if production_points > 0:
-                # then we add a diversity score multiplied by how much we car about resource diversity
-                total_rating += self.resource_diversity_desire * \
-                    self.getDiversityOfSettlement(board, settlement_location)
-
-        port = board.boardGraph[settlement_location].port
-        if port:
-            # multiply the addition by self.port_desire
-            total_rating += self.port_desire * \
-                self.evaluatePort(board, port, settlement_location)
-
-        total_rating += self.resource_synergy_in_setup(
-            board, settlement_location)
-
-        if debug:
-            print("Rating of settlement: {}".format(total_rating))
-
-        return total_rating
-
     def evaluatePort(self, board, port, hypothetical_settlement):
         # debug var
         debug = False
@@ -471,7 +424,7 @@ class dylanAIPlayer(player):
         return max(valid_options, key=valid_options.get)
 
     def move(self, board):
-        print("AI Player {} playing...".format(self.name))
+        print("{}'s TURN...".format(self.name))
         '''
         Options: 
 
@@ -612,34 +565,6 @@ class dylanAIPlayer(player):
                     # TODO: propose trade should propose one trade and return true if accepted
                     # able_to_do_something = self.propose_trade()
                     continue
-
-        '''
-        # Trade resources if there are excessive amounts of a particular resource
-        self.trade()
-        # Build a settlements, city and few roads
-        possibleVertices = board.get_potential_settlements(self)
-        if(possibleVertices != {} and (self.resources['BRICK'] > 0 and self.resources['WOOD'] > 0 and self.resources['SHEEP'] > 0 and self.resources['WHEAT'] > 0)):
-            randomVertex = np.random.randint(0, len(possibleVertices.keys()))
-            self.build_settlement(list(possibleVertices.keys())[randomVertex], board)
-
-        # Build a City
-        possibleVertices = board.get_potential_cities(self)
-        if(possibleVertices != {} and (self.resources['WHEAT'] >= 2 and self.resources['ORE'] >= 3)):
-            randomVertex = np.random.randint(0, len(possibleVertices.keys()))
-            self.build_city(list(possibleVertices.keys())[randomVertex], board)
-
-        # Build a couple roads
-        for i in range(2):
-            if(self.resources['BRICK'] > 0 and self.resources['WOOD'] > 0):
-                possibleRoads = board.get_potential_roads(self)
-                randomEdge = np.random.randint(0, len(possibleRoads.keys()))
-                self.build_road(list(possibleRoads.keys())[randomEdge][0], list(possibleRoads.keys())[randomEdge][1], board)
-
-        # Draw a Dev Card with 1/3 probability
-        devCardNum = np.random.randint(0, 3)
-        if(devCardNum == 0):
-            self.draw_devCard(board)
-        '''
         return
 
     def make_one_trade_for_option(self, option):
@@ -711,39 +636,8 @@ class dylanAIPlayer(player):
         two main ways to place road:
             - place to reach a new settlement spot
             - place to get longest road
-
-
-        # TODO: make it also consider roads that explicitly increase the length
         '''
-        print("AI BUILDING ROAD...")
 
-
-        '''
-        # dont consider spots that we already have roads to
-        already_reached_settlement_spots = board.get_potential_settlements(
-            self)
-
-        # building for a new settlement spot
-        destination_settlement = self.get_best_setup_settlement(
-            board, exclude=already_reached_settlement_spots)
-
-        possible_roads = board.get_potential_roads(self)
-        min_dist = 99999
-        best_road = None
-
-        for road in possible_roads:
-            # whichever road has the closest endpoint to the settlement we will choose
-            start = road[0]
-            end = road[1]
-
-            dist_to_closer_endpoint = min(board.vertexDistance(
-                start, destination_settlement), board.vertexDistance(end, destination_settlement))
-
-            if dist_to_closer_endpoint < min_dist:
-                best_road = road
-                min_dist = dist_to_closer_endpoint
-
-        '''
         possible_roads = board.get_potential_roads(self)
 
         if setup:
