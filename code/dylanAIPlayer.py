@@ -500,7 +500,7 @@ class dylanAIPlayer(player):
                 see if porting or trading with bank allows us to do it
 
         '''
-        debug = True
+        debug = False
         # we may have already played a knight before rolling
         # may have rolled a 7 and moved the robber AND discarded cards
 
@@ -1571,6 +1571,8 @@ class dylanAIPlayer(player):
     def place_robber(self, board):
         print("{} is moving the robber...".format(self.name))
 
+        debug = False
+
         all_players = list(self.game.playerQueue.queue)
 
         # in order of number of victory points
@@ -1582,25 +1584,56 @@ class dylanAIPlayer(player):
         for player in all_players:
             # skip ourselves
             if player != self:
-
                 if sum(player.resources.values()) > 0:
                     all_have_zero = False
 
         valid_robber_spots = board.get_robber_spots()
 
-        # for each opponents with at least one card (or if all opponents have 0 cards then all of them)
-        for player in all_players:
-            # skip ourselves
-            if player != self:
-                # if this player has cards, or if everyone has zero cards
-                if sum(player.resources.values()) > 0 or all_have_zero:
+        # check if all opponents have the same amount of vp
+        if self.all_opponents_tied_for_vps():
 
-                    opponent_adjacent_hexes = self.get_adjacent_hexes_for_player(board, player, exclude_selves=True)                    
-                    opponent_adjacent_hexes.sort(reverse=True, key=lambda opp_hex: self.get_opponent_production_for_hex(board, opp_hex))
+            # place on hex that is not adjacent to us with most production
+            all_valid_hexes = []
 
-                    for opp_hex in opponent_adjacent_hexes and opp_hex in valid_robber_spots:
-                        self.move_robber(opp_hex, board, player)
-                        return
+            for player in all_players:
+                # skip ourselves
+                if player != self:
+                    opponent_adjacent_hexes = self.get_adjacent_hexes_for_player(board, player, exclude_selves=True)         
+                    for adj_hex in opponent_adjacent_hexes:
+                        if adj_hex not in all_valid_hexes:
+                            all_valid_hexes.append(adj_hex)
+
+            # sort them from most opponent production to least           
+            all_valid_hexes.sort(reverse=True, key=lambda opp_hex: self.get_opponent_production_for_hex(board, opp_hex))
+
+            for opp_hex in all_valid_hexes:
+                if opp_hex in valid_robber_spots:
+
+                    if debug:
+                        print("Moving to hex {}. Production blocked: {}".format(opp_hex, self.get_opponent_production_for_hex(board, opp_hex)))
+
+                    self.move_robber(opp_hex, board, player)
+                    return
+
+        else:
+            # for each opponents with at least one card (or if all opponents have 0 cards then all of them)
+            for player in all_players:
+                # skip ourselves
+                if player != self:
+                    # if this player has cards, or if everyone has zero cards
+                    if sum(player.resources.values()) > 0 or all_have_zero:
+
+                        opponent_adjacent_hexes = self.get_adjacent_hexes_for_player(board, player, exclude_selves=True)                    
+                        opponent_adjacent_hexes.sort(reverse=True, key=lambda opp_hex: self.get_opponent_production_for_hex(board, opp_hex))
+
+                        for opp_hex in opponent_adjacent_hexes:
+                            if opp_hex in valid_robber_spots:
+
+                                if debug:
+                                    print("Moving to hex {}. Production blocked: {}".format(opp_hex, self.get_opponent_production_for_hex(board, opp_hex)))
+
+                                self.move_robber(opp_hex, board, player)
+                                return
 
         # TODO: failsafe if somehow it all is not possible, just pick one that has most production next to someone with a card
         return
@@ -1649,6 +1682,22 @@ class dylanAIPlayer(player):
 
         return output
 
+    def all_opponents_tied_for_vps(self):
+        all_opponents = list(self.game.playerQueue.queue)
+        all_opponents.remove(self)
+
+        all_vps = [player.victoryPoints for player in all_opponents]
+
+        prev = all_vps[0]
+
+        for vp_score in all_vps:
+            if vp_score == prev:
+                prev = vp_score
+                continue
+            else:
+                return False
+            
+        return True
 
 
     def play_knight(self, board):

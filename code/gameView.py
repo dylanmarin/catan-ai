@@ -55,10 +55,12 @@ class catanGameView():
                 resourceText = self.font_resource.render(str(hexTile.resource.type), False, (0,0,0))
                 hexNumText = self.font_hexNum.render(str(hexTile.resource.num), False, (0,0,0))
                 prodPointsText = self.font_hexNum.render("(" + self.diceRoll_expectation[hexTile.resource.num] * "●" +")", False, (0,0,0))
+                hexTileIndexText = self.font_resource.render(str(hexTile.index), False, (0,0,0))
 
                 self.screen.blit(resourceText, (hexTile.pixelCenter.x -25, hexTile.pixelCenter.y)) #add text to hex
                 self.screen.blit(hexNumText, (hexTile.pixelCenter.x - 15, hexTile.pixelCenter.y - 30)) #add num to hex
                 self.screen.blit(prodPointsText, (hexTile.pixelCenter.x - 25, hexTile.pixelCenter.y + 13)) #add num to hex
+                self.screen.blit(hexTileIndexText, (hexTile.pixelCenter.x, hexTile.pixelCenter.y + 45)) #add num to hex
 
 
         #Display the Ports - update images/formatting later

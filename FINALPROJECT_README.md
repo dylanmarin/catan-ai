@@ -1,14 +1,13 @@
 # TODO
 NEXT:
-robber block winning player's tile that is shared with the most people ie produces the most production output 
-
 make it point initial road to direciton of next best settlement they EXPECT to have. ie. first player points to 8th best settlement spot (6 picks before their next, plus they will have placed another before this intial settlement could theoretically expand)
-
 
 using year of plenty instead of trading
 
 choosing which dev card to play
 playing mono or road building
+
+
 
 
 todo:
@@ -18,11 +17,11 @@ making moves
 MEDIUM: 
 implement resource synergy of a settlement
 Fix drawing in between placing settlements. something is not right
+Fallback for if none of our logical options for placing the robber works
+Deciding not to play a robber when blocked
 
 LOW:
 make trading ui on screen
-Fallback for if none of our logical options for placing the robber works
-Deciding not to play a robber when blocked
 Bayesian inference on unplayed cards
 Counting resources in bank before dealing out cards
 
@@ -35,8 +34,8 @@ COMPLETED:
 4/13
 - remove goals that actually would break the our resources for the current goal if built
     - ie if we wanna build a settlement, only remove dev card if it would mean we lose one of the items we need
-- 
-
+- robber block winning player's tile that is shared with the most people ie produces the most production output 
+    - block most common resource if all opponents are tied
 
 4/12
 - choose number of opponents (always 1vX) and choose which positioin you play in
