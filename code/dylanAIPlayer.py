@@ -1602,42 +1602,6 @@ class dylanAIPlayer(player):
                         self.move_robber(opp_hex, board, player)
                         return
 
-
-                    '''
-                    settlements = player.buildGraph["SETTLEMENTS"]
-
-
-
-                    # rate all opponent settlements and sort them
-                    # TODO
-                    # TODO
-                    # TODO
-                    # TODO
-                    # TODO: evaluate opponent settlement
-                    # settlements.sort(
-                    #     reverse=True, key=lambda s: player.evaluateSettlement(board, s))
-
-                    # for each settlement
-                    for settlement in settlements:
-                        valid_hex_options = []
-
-                        # get all adjacent hexes and sort them in order of production points
-                        for adj_hex in board.boardGraph[settlement].adjacentHexList:
-
-                            # if the hex is adjacent to our settlement, skip it
-                            if not self.hex_is_adjacent_to_us(board, adj_hex) and adj_hex in valid_robber_spots:
-                                # otherwise place on the hex with most production
-                                valid_hex_options.append(adj_hex)
-
-                        valid_hex_options.sort(
-                            reverse=True, key=lambda h: self.production_points_for_hex(board, h))
-
-                        for option in valid_hex_options:
-                            self.move_robber(option, board, player)
-
-                            return
-                    '''
-
         # TODO: failsafe if somehow it all is not possible, just pick one that has most production next to someone with a card
         return
 
