@@ -14,7 +14,7 @@ class dylanAIPlayer(player):
 
     # Update AI player flag and resources
     # DYLAN: Added params to give initial preference to different resources
-    def updateAI(self, game, ore=1, brick=5, wheat=2, wood=5, sheep=1, port_desire=0.85, resource_diversity_desire=0.6):
+    def updateAI(self, game, ore=4, brick=2, wheat=4, wood=2, sheep=2, port_desire=0.85, resource_diversity_desire=0.6):
         self.isAI = True
 
         # Initialize resources with just correct number needed for set up (2 settlements and 2 road)
@@ -58,6 +58,30 @@ class dylanAIPlayer(player):
 
         '''
         self.resource_diversity_desire = resource_diversity_desire
+
+        self.road_cost = {'ORE': 0, 'BRICK': 1,
+                          'WHEAT': 0, 'WOOD': 1, 'SHEEP': 0}
+        self.city_cost = {'ORE': 3, 'BRICK': 0,
+                          'WHEAT': 2, 'WOOD': 0, 'SHEEP': 0}
+        self.settlement_cost = {'ORE': 0, 'BRICK': 1,
+                                'WHEAT': 1, 'WOOD': 1, 'SHEEP': 1}
+        self.buy_dev_cost = {'ORE': 1, 'BRICK': 0,
+                             'WHEAT': 1, 'WOOD': 0, 'SHEEP': 1}
+        self.play_dev_cost = {'ORE': 0, 'BRICK': 0,
+                              'WHEAT': 0, 'WOOD': 0, 'SHEEP': 0}
+
+        self.road_resources = ['WOOD', 'BRICK']
+        self.city_resources = ['ORE', 'WHEAT']
+        self.settlement_resources = ['WOOD', 'BRICK', 'WHEAT', 'SHEEP']
+        self.buy_dev_resources = ['ORE', 'WHEAT', 'SHEEP']
+
+        self.option_to_resources_required_dict = \
+            {"BUY_DEV": self.buy_dev_cost,
+             "SETTLEMENT": self.settlement_cost,
+             "CITY": self.city_cost,
+             "ROAD": self.road_cost,
+             "PLAY_DEV": self.play_dev_cost}
+
         self.game = game
 
         print("Added new AI Player: ", self.name)
@@ -78,7 +102,6 @@ class dylanAIPlayer(player):
         # self.build_road(best_road[0], best_road[1], board)
 
         self.place_best_road(board, setup=True)
-
 
     # DYLAN: Added evaluate settlement function
 
@@ -147,11 +170,11 @@ class dylanAIPlayer(player):
         debug = False
 
         total_value = 0
-        
+
         # if we already have the port, it doesn't provide additional value
         if port in self.portList:
             return total_value
-        
+
         # if it is a 2:1 port
         if port[:3] == "2:1":
             port_resource_type = port[4:]
@@ -378,6 +401,16 @@ class dylanAIPlayer(player):
     def pick_setup_road(self, board):
         '''
         Function used just for initial road choice
+
+        TODO
+        TODO
+        TODO
+        TODO
+        TODO
+
+        first: use this function in initial setup again
+
+        then: make it estimate the next best settlement that it would actually be able to build at (given position in choosing), and point there
         '''
 
         # get next best settlement, and build a road in the direction of it
@@ -522,14 +555,11 @@ class dylanAIPlayer(player):
                 else:
                     # if we have < 7 cards, discard lower rated options that will hinder our current goal
                     if sum(self.resources.values()) <= 7:
-                        if option == "SETTLEMENT":
-                            if "ROAD" in options:
-                                options.remove("ROAD")
-                            if "BUY_DEV" in options:
-                                options.remove("BUY_DEV")
-                        if option == "CITY":
-                            if "BUY_DEV" in options:
-                                options.remove("BUY_DEV")
+                        goals_to_remove = self.remove_conflicting_goals(
+                            option, options)
+                        for goal_to_remove in goals_to_remove:
+                            if goal_to_remove in options:
+                                options.remove(goal_to_remove)
 
                     # while we 7+ cards, trade towards our highest rated option
                     while sum(self.resources.values()) > 7:
@@ -542,14 +572,11 @@ class dylanAIPlayer(player):
                             # don't do a lower rated option if it will make it impossible to do a higher rated option:
                             # i.e. dont build a road if we'd prefer to build a settlement
                             # unless we currently have lots of cards, then spending is prioritized
-                            if option == "SETTLEMENT":
-                                if "ROAD" in options:
-                                    options.remove("ROAD")
-                                if "BUY_DEV" in options:
-                                    options.remove("BUY_DEV")
-                            if option == "CITY":
-                                if "BUY_DEV" in options:
-                                    options.remove("BUY_DEV")
+                            goals_to_remove = self.remove_conflicting_goals(
+                                option, options)
+                            for goal_to_remove in goals_to_remove:
+                                if goal_to_remove in options:
+                                    options.remove(goal_to_remove)
                         else:
 
                             if debug:
@@ -566,6 +593,86 @@ class dylanAIPlayer(player):
                     # able_to_do_something = self.propose_trade()
                     continue
         return
+
+    def remove_conflicting_goals(self, current_goal, all_options):
+        '''
+        given the current goal, return any option that would disallow us to build the current goal
+        '''
+        debug = False
+        goals_to_remove = []
+
+        for option in all_options:
+            if option != current_goal or option == "PLAY_DEV":
+                if debug:
+                    print("Checking if {} conflicts with {}".format(
+                        option, current_goal))
+                if not self.can_build_without_breaking(current_goal, option):
+                    if debug:
+                        print("It did conflict")
+                    goals_to_remove.append(option)
+
+                else:
+                    if debug:
+                        print("It did not conflict")
+
+        if debug:
+            print()
+
+        return goals_to_remove
+
+    def can_build_without_breaking(self, build_option, breaking_option):
+        '''
+        given two options, determine whether we have enough resources to do the breaking option without going below what is needed for the build option
+
+        return true if we can build our breaking option and we have not gone below what cards are needed for the build option
+        '''
+        # doesnt cost anything
+        if breaking_option == "PLAY_DEV":
+            return True
+        
+        debug = False and build_option == "SETTLEMENT"
+
+        # dict from option to a DICT OF RESOURCE:NUMBER representing the cost for the option
+        cost_of_build_option = self.option_to_resources_required_dict[build_option]
+
+        # dict from option to a DICT OF RESOURCE:NUMBER representing the cost for the option
+        cost_of_breaking_option = self.option_to_resources_required_dict[breaking_option]
+
+        if debug:
+            print("Checking if {} conflicts with {}".format(
+                breaking_option, build_option))
+
+        # for each resource
+        for resource in cost_of_build_option.keys():
+
+            current_amount = self.resources[resource]
+            required_amount = cost_of_build_option[resource]
+            possible_breaking_amount = cost_of_breaking_option[resource]
+
+
+            # if we don't need this resource for either of the build options, it doesnt matter
+            # if we dont have the resource, then building anything cant decrease this below the threshold
+            if required_amount == 0 or possible_breaking_amount == 0 or current_amount == 0:
+                if debug:
+                    print(" It does not conflict")
+                continue
+
+            if debug:
+                print(" For {}, we have {} {}, we need {}, and want {} for {}".format(
+                    build_option, current_amount, resource, required_amount, possible_breaking_amount, breaking_option))
+                print(" If we built {}, we'd have {} remaining for {}".format(breaking_option, current_amount-possible_breaking_amount, build_option))
+
+            # if our current amount minus the cost of the breaking option is less than what we need for our
+            # build option, it would break our resources for the build optoin
+            if current_amount - possible_breaking_amount < required_amount:
+                if debug:
+                    print(" It DOES conflict")
+                return False
+
+
+            if debug:
+                print()
+        return True
 
     def make_one_trade_for_option(self, option):
         '''
@@ -643,7 +750,8 @@ class dylanAIPlayer(player):
         if setup:
             possible_roads = board.get_setup_roads(self)
 
-        best_road = max(possible_roads, key= lambda road : self.evaluateRoad(board, road, setup=setup))
+        best_road = max(possible_roads, key=lambda road: self.evaluateRoad(
+            board, road, setup=setup))
 
         self.build_road(best_road[0], best_road[1], board)
         return
@@ -697,37 +805,42 @@ class dylanAIPlayer(player):
                     utility += 1000
 
                     if debug:
-                        print("Longest Road would give us the win. Utility {}".format(utility))
+                        print(
+                            "Longest Road would give us the win. Utility {}".format(utility))
                     return utility
 
             # if it is possible to do in 2 roads
             elif self.would_give_us_longest(board, one_degree_roads):
                 utility += longest_road_utility * (0.6666)
                 if debug:
-                    print("Road gives us access to a road that would give us longest road. Utility {}".format(utility))
+                    print("Road gives us access to a road that would give us longest road. Utility {}".format(
+                        utility))
 
             # if it is possible to do in 3 roads
             elif self.would_give_us_longest(board, two_degree_roads):
                 utility += longest_road_utility * (0.3333)
                 if debug:
-                    print("Road gives 3-degree access to longest road. Utility {}".format(utility))
+                    print(
+                        "Road gives 3-degree access to longest road. Utility {}".format(utility))
 
         # settlement spots that we get access to with the given road
-        one_degree_settlement_spots = self.get_potential_settlemnt_spots_with_roads(board, [road])
+        one_degree_settlement_spots = self.get_potential_settlemnt_spots_with_roads(board, [
+                                                                                    road])
 
         # should just be one. a road can only open up one new settlement spot at a time
         for settlement in one_degree_settlement_spots:
             utility += settlement_base_utility * \
                 self.evaluateSettlement(board, settlement)
             if debug:
-                print("Settlement Utility this road gives immediate access to: {}. Utility {}".format(self.evaluateSettlement(board, settlement), utility))
+                print("Settlement Utility this road gives immediate access to: {}. Utility {}".format(
+                    self.evaluateSettlement(board, settlement), utility))
 
         # exclude 1-degree spots
-        two_degree_settlement_spots = self.get_potential_settlemnt_spots_with_roads(board, one_degree_roads)
+        two_degree_settlement_spots = self.get_potential_settlemnt_spots_with_roads(
+            board, one_degree_roads)
         for settlement in one_degree_settlement_spots:
             if settlement in two_degree_settlement_spots:
                 two_degree_settlement_spots.remove(settlement)
-
 
         if len(two_degree_settlement_spots) > 0:
             best_settlement = max(
@@ -735,11 +848,12 @@ class dylanAIPlayer(player):
             utility += (0.2) * settlement_base_utility * \
                 self.evaluateSettlement(board, best_settlement)
             if debug:
-                print("Settlement Utility this road gives 2-degree access to: {}. Utility {}".format(self.evaluateSettlement(board, best_settlement), utility))
-
+                print("Settlement Utility this road gives 2-degree access to: {}. Utility {}".format(
+                    self.evaluateSettlement(board, best_settlement), utility))
 
         # exclude 2-degree spots
-        three_degree_settlement_spots = self.get_potential_settlemnt_spots_with_roads(board, two_degree_roads)
+        three_degree_settlement_spots = self.get_potential_settlemnt_spots_with_roads(
+            board, two_degree_roads)
 
         for settlement in one_degree_settlement_spots + two_degree_settlement_spots:
             if settlement in three_degree_settlement_spots:
@@ -751,7 +865,8 @@ class dylanAIPlayer(player):
             utility += (0.1) * settlement_base_utility * \
                 self.evaluateSettlement(board, best_settlement)
             if debug:
-                print("Settlement Utility this road gives 3-degree access to: {}. Utility {}".format(self.evaluateSettlement(board, best_settlement), utility))
+                print("Settlement Utility this road gives 3-degree access to: {}. Utility {}".format(
+                    self.evaluateSettlement(board, best_settlement), utility))
 
         if self.would_increase_max_length(board, road):
             utility += increase_max_length_utility
@@ -776,7 +891,6 @@ class dylanAIPlayer(player):
             if road not in self.buildGraph["ROADS"]:
                 new_roads.append(road)
 
-        
         # exclude any roads that we can already build
         exclude_list = list(board.get_potential_roads(self))
 
@@ -805,7 +919,6 @@ class dylanAIPlayer(player):
         # if we can't take it, no roads would give us longest road
         if not self.can_take_longest_road():
             return False
-        
 
         # double check that we are only using roads that we didnt already build
         new_roads = []
@@ -818,12 +931,11 @@ class dylanAIPlayer(player):
             self.buildGraph["ROADS"].append(road)
             board.updateBoardGraph_road(road[0], road[1], self)
 
-
         max_length = self.get_road_length(board)
 
         could_take_longest = False
         # has to be at least 5
-        if (max_length >= 5): 
+        if (max_length >= 5):
             could_take_longest = True
             for player in list(self.game.playerQueue.queue):
                 # if another player has the same or longer length, we dont have longest
@@ -834,7 +946,6 @@ class dylanAIPlayer(player):
         for road in new_roads:
             self.buildGraph["ROADS"].remove(road)
             board.remove_road_from_boardGraph(road[0], road[1])
-
 
         return could_take_longest
 
@@ -851,7 +962,7 @@ class dylanAIPlayer(player):
         board.updateBoardGraph_road(road[0], road[1], self)
 
         max_length = self.get_road_length(board)
-        
+
         self.buildGraph["ROADS"].remove(road)
         board.remove_road_from_boardGraph(road[0], road[1])
 
@@ -869,7 +980,6 @@ class dylanAIPlayer(player):
             if road not in self.buildGraph["ROADS"]:
                 new_roads.append(road)
 
-        
         # exclude any settlements we can already build
         exclude_list = list(board.get_potential_settlements(self).keys())
 
@@ -877,7 +987,6 @@ class dylanAIPlayer(player):
         for road in new_roads:
             self.buildGraph["ROADS"].append(road)
             board.updateBoardGraph_road(road[0], road[1], self)
-
 
         new_settlements = list(board.get_potential_settlements(self).keys())
 
@@ -990,6 +1099,7 @@ class dylanAIPlayer(player):
     '''
     "desire"/utility functions. main goals for these is that they do the best thing when it is obvious. DONT BE STUPID!
     '''
+
     def get_road_desire(self, board):
         '''
         if we have no available SPOTS for roads, it is 0
@@ -1015,7 +1125,6 @@ class dylanAIPlayer(player):
             return utility
 
         return max(self.evaluateRoad(board, road) for road in board.get_potential_roads(self))
-
 
         if self.maxRoadLength == max(player.maxRoadLength for player in list(self.game.playerQueue.queue)):
             utility += 12
@@ -1071,8 +1180,7 @@ class dylanAIPlayer(player):
         we max out utility if we are 1 VP from winning
         '''
         # start with base utility because they give us VPs
-        utility = 15
-
+        utility = 10
 
         if self.settlementsLeft == 0 or len(board.get_potential_settlements(self)) == 0:
             return 0
@@ -1463,8 +1571,6 @@ class dylanAIPlayer(player):
     def place_robber(self, board):
         print("{} is moving the robber...".format(self.name))
 
-        # potentialRobberDict = self.board.get_robber_spots() # excludes the spot that had the orbber on it
-
         all_players = list(self.game.playerQueue.queue)
 
         # in order of number of victory points
@@ -1488,7 +1594,19 @@ class dylanAIPlayer(player):
             if player != self:
                 # if this player has cards, or if everyone has zero cards
                 if sum(player.resources.values()) > 0 or all_have_zero:
+
+                    opponent_adjacent_hexes = self.get_adjacent_hexes_for_player(board, player, exclude_selves=True)                    
+                    opponent_adjacent_hexes.sort(reverse=True, key=lambda opp_hex: self.get_opponent_production_for_hex(board, opp_hex))
+
+                    for opp_hex in opponent_adjacent_hexes and opp_hex in valid_robber_spots:
+                        self.move_robber(opp_hex, board, player)
+                        return
+
+
+                    '''
                     settlements = player.buildGraph["SETTLEMENTS"]
+
+
 
                     # rate all opponent settlements and sort them
                     # TODO
@@ -1516,11 +1634,58 @@ class dylanAIPlayer(player):
 
                         for option in valid_hex_options:
                             self.move_robber(option, board, player)
-                            self.devCardPlayedThisTurn = True
+
                             return
+                    '''
 
         # TODO: failsafe if somehow it all is not possible, just pick one that has most production next to someone with a card
         return
+
+    def get_adjacent_hexes_for_player(self, board, player, exclude_selves=True):
+
+        hexes = []
+        for settlement in player.buildGraph["SETTLEMENTS"]:
+            for adj_hex in board.boardGraph[settlement].adjacentHexList:
+                if adj_hex not in hexes:
+                    hexes.append(adj_hex)
+
+        # if we want to exclude any tiles adjacent to us
+        if exclude_selves:
+            for settlement in self.buildGraph["SETTLEMENTS"]:
+                for adj_hex in board.boardGraph[settlement].adjacentHexList:
+                    if adj_hex in hexes:
+                        hexes.remove(adj_hex)
+
+        return hexes
+    
+    def get_opponent_production_for_hex(self, board, opp_hex):
+        '''
+        for a given hex, get its production points for each adjacent settlement/city and sum it
+
+        do not include our pp for this
+        '''
+        output = 0
+
+        base_prod_points = self.production_points_for_hex(board, opp_hex)
+
+        # for each player
+        for player in list(self.game.playerQueue.queue):
+            
+            # for each of their settlements
+            for settlement in player.buildGraph["SETTLEMENTS"]:
+
+                # if the hex is adjacent to t=it
+                if opp_hex in board.boardGraph[settlement].adjacentHexList:
+
+                    output += base_prod_points
+
+                    # if it is a city, double it
+                    if opp_hex in player.buildGraph["CITIES"]:
+                        output += base_prod_points
+
+        return output
+
+
 
     def play_knight(self, board):
         if self.devCardPlayedThisTurn:

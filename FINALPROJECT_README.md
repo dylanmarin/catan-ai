@@ -1,16 +1,14 @@
 # TODO
 NEXT:
-only remove goals if they would break the current goal-
-- ie if we wanna build a settlement, only remove dev card if it would mean we lose one of the items we need
-
-using year of plenty instead of trading
-robber blocking common resources
-
-evaluate opponent settlement and put it in robber placement - possibly choose the hex that has the most production for opponents
-choosing which dev card to play
-playing mono or road building
+robber block winning player's tile that is shared with the most people ie produces the most production output 
 
 make it point initial road to direciton of next best settlement they EXPECT to have. ie. first player points to 8th best settlement spot (6 picks before their next, plus they will have placed another before this intial settlement could theoretically expand)
+
+
+using year of plenty instead of trading
+
+choosing which dev card to play
+playing mono or road building
 
 
 todo:
@@ -34,12 +32,19 @@ search "IMPROVEMENT" for improvements that aren't TODO's
 
 COMPLETED:
 
+4/13
+- remove goals that actually would break the our resources for the current goal if built
+    - ie if we wanna build a settlement, only remove dev card if it would mean we lose one of the items we need
+- 
+
+
 4/12
 - choose number of opponents (always 1vX) and choose which positioin you play in
 - updated game to hide opponents cards opotionally
 - greatly improved road placement function
 - used new road placement function to place intiial road
 - updated port evaluation to only care about ports we dont already have
+- updated settlement desire to have some initial value to boost it since it gives us VPs that we need to win
 
 
 4/11

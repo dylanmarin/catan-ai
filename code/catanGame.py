@@ -297,7 +297,8 @@ class catanGame():
 
                 else:
                     # Player must discard resources
-                    player_i.discardResources()
+                    # player_i.discardResources()
+                    a = 1
 
             # Logic for robber
             if (currentPlayer.isAI):
@@ -383,7 +384,8 @@ class catanGame():
                 while (turnOver == False):
 
                     if (currPlayer.isAI):
-
+                        # time.sleep(0.3)
+                        
                         # check if AI wants to play a knight before rolling
                         if currPlayer.should_play_knight_before_rolling(self.board):
                             print("{} is playing a knight".format(
