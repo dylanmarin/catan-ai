@@ -1,20 +1,21 @@
 # TODO
 NEXT:
-make it point initial road to direciton of next best settlement they EXPECT to have. ie. first player points to 8th best settlement spot (6 picks before their next, plus they will have placed another before this intial settlement could theoretically expand)
-
 using year of plenty instead of trading
-
-choosing which dev card to play
 playing mono or road building
 
+get opponent resource count
+check if can build item with monopoly played
+check if can build with hypothetical additional resources
 
 
+make it point initial road to direciton of next best settlement they EXPECT to have. ie. first player points to 8th best settlement spot (6 picks before their next, plus they will have placed another before this intial settlement could theoretically expand)
 
 todo:
 HIGH:
 making moves
 
 MEDIUM: 
+pick a better resource when using year of plenty but only needing 1
 implement resource synergy of a settlement
 Fix drawing in between placing settlements. something is not right
 Fallback for if none of our logical options for placing the robber works
@@ -30,6 +31,10 @@ search "IMPROVEMENT" for improvements that aren't TODO's
 
 
 COMPLETED:
+
+4/16
+- play road building if it can’t build a road but wants to
+
 
 4/13
 - remove goals that actually would break the our resources for the current goal if built

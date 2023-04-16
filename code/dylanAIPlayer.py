@@ -21,8 +21,8 @@ class dylanAIPlayer(player):
         # Dictionary that keeps track of resource amounts
         self.resources = {'ORE': 0, 'BRICK': 4,
                           'WHEAT': 2, 'WOOD': 4, 'SHEEP': 2}
-        # self.resources = {'ORE': 2, 'BRICK': 100,
-        #                   'WHEAT': 4, 'WOOD': 100, 'SHEEP': 4}
+        # self.resources = {'ORE': 0, 'BRICK': 0,
+        #                   'WHEAT': 0, 'WOOD': 0, 'SHEEP': 0}
 
         # DYLAN: Moved their diceRoll_expectation dict into a class var
         self.diceRoll_expectation = {2: 1, 3: 2, 4: 3, 5: 4,
@@ -459,7 +459,7 @@ class dylanAIPlayer(player):
     def move(self, board):
         print("{}'s TURN...".format(self.name))
         '''
-        Options: 
+        Options:
 
         road
         settlement
@@ -578,20 +578,166 @@ class dylanAIPlayer(player):
                                 if goal_to_remove in options:
                                     options.remove(goal_to_remove)
                         else:
-
                             if debug:
                                 print("{} was unable to trade for {} and still has {} cards".format(
                                     self.name, option, sum(self.resources.values())))
                             # if we couldn't trade for something, then we can keep lower rated options in the queue
-                            break
 
-                    # if debug:
-                    #     print("Not able to do top choice")
+                            # if we couldnt trade for it see if we can play a dev card for it
+
+                            # if we want to build a road and it is our first choice option
+                            if max(move_goals, key=move_goals.get) == "ROAD":
+                                # if we have roadbuilding
+                                if self.can_play_roadbuilder():
+                                    # play it
+                                    self.play_roadbuilder(board)
+                                    able_to_do_something = True
+                                    break
+                                if debug:
+                                    print(
+                                        "Can't play roadbuilding for {}".format(option))
+
+                            # if we can play a year of plenty
+                            if self.can_play_year_of_plenty():
+                                # if we can build it by playing YoP
+                                if self.can_build_with_year_of_plenty(option):
+                                    # play the yop
+                                    self.play_year_of_plenty_for(option)
+                                    able_to_do_something = True
+                                    break
+                                if debug:
+                                    print(
+                                        "Can't use year of plenty for {}".format(option))
+
+                            # if we can play a monopoly
+                            if self.can_play_monopoly():
+                                # if we can build by monopolying
+                                if len(self.can_build_with_monopoly(option)) > 0:
+                                    self.play_monopoly(option)
+                                    able_to_do_something = True
+                                    break
+                                if debug:
+                                    print(
+                                        "Can't use monopoly for {}".format(option))
+
+                    # we have gone through all options
+                    # cant build
+                    # cant port for it
+                    # cant roadbuilder, year of plenty, or monopoly for it
 
                     # if we have gone through all options without doing anything, we don't need to loop again
                     # TODO: propose trade should propose one trade and return true if accepted
                     # able_to_do_something = self.propose_trade()
                     continue
+        return
+
+    def can_play_monopoly(self):
+        return self.devCards["MONOPOLY"] > 0 and not self.devCardPlayedThisTurn
+
+    def can_build_with_monopoly(self, option):
+        valid_resource_options=  []
+
+        for resource in hypothetical_additional_resources.keys():
+            hypothetical_additional_resources = {'ORE': 0, 'BRICK': 0, 'WHEAT': 0, 'WOOD': 0, 'SHEEP': 0}
+            hypothetical_additional_resources[resource] = self.get_opponent_count(resource)
+
+            if self.able_to_do(option, hypothetical_additional_resources) or self.able_to_trade_for(option, hypothetical_additional_resources):
+                valid_resource_options.append(resource)
+
+        return valid_resource_options
+
+    def get_opponent_count(self, resource):
+        '''
+        assumes the ai player has perfect knowledge of opponent card count. 
+
+        technically possible for humans who track what numbers have been rolled, so only slightly cheating
+        '''
+        count = 0
+        for player in list(self.game.playerQueue.queue):
+            if player != self:
+                count += player.resources[resource]
+        return count
+
+    def play_monopoly(self, option):
+        resource_options = self.can_build_with_monopoly(option)
+
+        # TODO: incorporate the idea that fewer cards may be better because of different port access
+
+        best_resource = max(resource_options, key= lambda resource: self.get_opponent_count(resource))
+
+        for player in list(self.game.playerQueue.queue):
+                if (player != self):
+                    self.resources[best_resource] += player.resources[best_resource]
+                    player.resources[best_resource] = 0
+
+        self.devCardPlayedThisTurn = True
+        self.devCards["MONOPOLY"] -= 1
+        return
+
+    def can_play_year_of_plenty(self):
+        return self.devCards["YEAROFPLENTY"] > 0 and not self.devCardPlayedThisTurn
+
+    def can_build_with_year_of_plenty(self, option):
+        resources_needed = self.get_resources_needed_for(option)
+
+        return sum(resources_needed.values()) <= 2
+
+    def get_resources_needed_for(self, option):
+        option_cost = self.option_to_resources_required_dict[option]
+
+        resource_need_dict = {}
+
+        for resource, cost in option_cost.items():
+            # the amount we have
+            current = self.resources[resource]
+
+            # the cost minus what we have, bounded to 0
+            need = max(cost - current, 0)
+
+            resource_need_dict[resource] = need
+
+        return resource_need_dict
+
+    def play_year_of_plenty_for(self, option):
+        print("{} playing YEAROFPLENTY...".format(self.name))
+        resources_needed = self.get_resources_needed_for(option)
+
+        for resource, cost in resources_needed.items():
+            if cost == 2:
+                self.resources[resource] += 2
+                print("Using YEAROFPLENTY for 2 {}".format(resource))
+                self.devCardPlayedThisTurn = True
+                self.devCards["YEAROFPLENTY"] -= 1
+                return
+            elif cost == 1:
+                self.resources[resource] += 1
+                print("Using YEAROFPLENTY for 1 {}".format(resource))
+
+        # TODO: DONT randomly pick a resource
+        random_resource = self.resources.keys()[np.random.randint(0, 5)]
+        self.resources[random_resource] += 1
+        print("Using YEAROFPLENTY for 1 {}".format(random_resource))
+
+        self.devCardPlayedThisTurn = True
+        self.devCards["YEAROFPLENTY"] -= 1
+        return
+
+    def can_play_roadbuilder(self):
+        return self.devCards["ROADBUILDER"] > 0 and not self.devCardPlayedThisTurn
+
+    def play_roadbuilder(self, board):
+        if self.can_play_roadbuilder():
+
+            # place 2 free roads
+            self.place_best_road(board, road_builder=True)
+            self.place_best_road(board, road_builder=True)
+
+            # subtract the card
+            self.devCards["ROADBUILDER"] -= 1
+
+            #
+            self.devCardPlayedThisTurn = True
+
         return
 
     def remove_conflicting_goals(self, current_goal, all_options):
@@ -629,7 +775,7 @@ class dylanAIPlayer(player):
         # doesnt cost anything
         if breaking_option == "PLAY_DEV":
             return True
-        
+
         debug = False and build_option == "SETTLEMENT"
 
         # dict from option to a DICT OF RESOURCE:NUMBER representing the cost for the option
@@ -649,7 +795,6 @@ class dylanAIPlayer(player):
             required_amount = cost_of_build_option[resource]
             possible_breaking_amount = cost_of_breaking_option[resource]
 
-
             # if we don't need this resource for either of the build options, it doesnt matter
             # if we dont have the resource, then building anything cant decrease this below the threshold
             if required_amount == 0 or possible_breaking_amount == 0 or current_amount == 0:
@@ -660,7 +805,8 @@ class dylanAIPlayer(player):
             if debug:
                 print(" For {}, we have {} {}, we need {}, and want {} for {}".format(
                     build_option, current_amount, resource, required_amount, possible_breaking_amount, breaking_option))
-                print(" If we built {}, we'd have {} remaining for {}".format(breaking_option, current_amount-possible_breaking_amount, build_option))
+                print(" If we built {}, we'd have {} remaining for {}".format(
+                    breaking_option, current_amount-possible_breaking_amount, build_option))
 
             # if our current amount minus the cost of the breaking option is less than what we need for our
             # build option, it would break our resources for the build optoin
@@ -668,7 +814,6 @@ class dylanAIPlayer(player):
                 if debug:
                     print(" It DOES conflict")
                 return False
-
 
             if debug:
                 print()
@@ -738,7 +883,7 @@ class dylanAIPlayer(player):
             self.play_best_dev_card(board)
             return
 
-    def place_best_road(self, board, setup=False):
+    def place_best_road(self, board, setup=False, road_builder=False):
         '''
         two main ways to place road:
             - place to reach a new settlement spot
@@ -753,7 +898,8 @@ class dylanAIPlayer(player):
         best_road = max(possible_roads, key=lambda road: self.evaluateRoad(
             board, road, setup=setup))
 
-        self.build_road(best_road[0], best_road[1], board)
+        self.build_road(best_road[0], best_road[1],
+                        board, road_builder=road_builder)
         return
 
     def evaluateRoad(self, board, road, debug=False, setup=False):
@@ -774,7 +920,7 @@ class dylanAIPlayer(player):
 
         if it increases max road length, apply medium amount of utility, close to that of allowing us to settle, but without settlement multiplier
 
-        IMPROVEMNET: cutting off opponents        
+        IMPROVEMNET: cutting off opponents
         '''
 
         utility = 0
@@ -1039,38 +1185,40 @@ class dylanAIPlayer(player):
 
         return
 
-    def able_to_do(self, option):
+    def able_to_do(self, option, hypothetical_extra_resources={'ORE': 0, 'BRICK': 0,
+                                                         'WHEAT': 0, 'WOOD': 0, 'SHEEP': 0}):
         '''
         helper function given a key (string) determines whether we can immediately do said option
         with our current resources
         '''
         if option == "ROAD":
-            return self.can_buy_road()
+            return self.can_buy_road(hypothetical_extra_resources)
         elif option == "SETTLEMENT":
-            return self.can_buy_settlement()
+            return self.can_buy_settlement(hypothetical_extra_resources)
         elif option == "CITY":
-            return self.can_buy_city()
+            return self.can_buy_city(hypothetical_extra_resources)
         elif option == "BUY_DEV":
-            return self.can_buy_dev_card()
+            return self.can_buy_dev_card(hypothetical_extra_resources)
         elif option == "PLAY_DEV":
-            return self.can_play_dev_card()
+            return self.can_play_dev_card(hypothetical_extra_resources)
 
-    def able_to_trade_for(self, option):
+    def able_to_trade_for(self, option, hypothetical_extra_resources={'ORE': 0, 'BRICK': 0,
+                                                         'WHEAT': 0, 'WOOD': 0, 'SHEEP': 0}):
         '''
         helper function given a key (string) determines whether we can trade with bank/ports to get desired item
         '''
         if option == "ROAD":
             return self.can_get_resources_through_trading({'ORE': 0, 'BRICK': 1,
-                                                           'WHEAT': 0, 'WOOD': 1, 'SHEEP': 0})
+                                                           'WHEAT': 0, 'WOOD': 1, 'SHEEP': 0}, hypothetical_extra_resources)
         elif option == "SETTLEMENT":
             return self.can_get_resources_through_trading({'ORE': 0, 'BRICK': 1,
-                                                           'WHEAT': 1, 'WOOD': 1, 'SHEEP': 1})
+                                                           'WHEAT': 1, 'WOOD': 1, 'SHEEP': 1}, hypothetical_extra_resources)
         elif option == "CITY":
             return self.can_get_resources_through_trading({'ORE': 3, 'BRICK': 0,
-                                                           'WHEAT': 2, 'WOOD': 0, 'SHEEP': 0})
+                                                           'WHEAT': 2, 'WOOD': 0, 'SHEEP': 0}, hypothetical_extra_resources)
         elif option == "BUY_DEV":
             return self.can_get_resources_through_trading({'ORE': 1, 'BRICK': 0,
-                                                           'WHEAT': 1, 'WOOD': 0, 'SHEEP': 1})
+                                                           'WHEAT': 1, 'WOOD': 0, 'SHEEP': 1}, hypothetical_extra_resources)
         elif option == "PLAY_DEV":
             return self.can_play_dev_card()
 
@@ -1145,7 +1293,7 @@ class dylanAIPlayer(player):
 
         otherwise if our current max length + number of roads we can build > current max length, we can
 
-        IMPROVEMENT: currently it does not consider if it cant build the roads in a way that improves the road length, 
+        IMPROVEMENT: currently it does not consider if it cant build the roads in a way that improves the road length,
         only if it can build enough roads that would theoretically add to its max length
         '''
 
@@ -1220,7 +1368,7 @@ class dylanAIPlayer(player):
 
     def get_buy_dev_desire(self, board):
         '''
-        dev card should be somewhere in the middle. we kind of want to buy dev cards only if our production matches it well, 
+        dev card should be somewhere in the middle. we kind of want to buy dev cards only if our production matches it well,
         but we dont want to buy dev cards if it will ruin our other stuff
         '''
         # base medium utility
@@ -1251,22 +1399,33 @@ class dylanAIPlayer(player):
     helper functions to tell us if we can do something
     '''
 
-    def can_buy_road(self):
-        return self.resources["BRICK"] > 0 and self.resources["WOOD"] > 0
+    def can_buy_road(self, hypothetical_extra_resources={'ORE': 0, 'BRICK': 0,
+                                                         'WHEAT': 0, 'WOOD': 0, 'SHEEP': 0}):
+        return self.resources["BRICK"] + hypothetical_extra_resources["BRICK"] > 0 \
+            and self.resources["WOOD"] + hypothetical_extra_resources["WOOD"] > 0
 
-    def can_buy_settlement(self):
-        return self.resources["BRICK"] > 0 and self.resources["WOOD"] > 0 and self.resources["SHEEP"] > 0 and self.resources["WHEAT"] > 0
+    def can_buy_settlement(self, hypothetical_extra_resources={'ORE': 0, 'BRICK': 0,
+                                                               'WHEAT': 0, 'WOOD': 0, 'SHEEP': 0}):
+        return self.resources["BRICK"] + hypothetical_extra_resources["BRICK"] > 0 \
+            and self.resources["WOOD"] + hypothetical_extra_resources["WOOD"] > 0 \
+            and self.resources["SHEEP"] + hypothetical_extra_resources["SHEEP"] > 0 \
+            and self.resources["WHEAT"] + hypothetical_extra_resources["WHEAT"] > 0
 
-    def can_buy_city(self):
-        return self.resources["WHEAT"] >= 2 and self.resources["ORE"] >= 3
+    def can_buy_city(self, hypothetical_extra_resources={'ORE': 0, 'BRICK': 0,
+                                                         'WHEAT': 0, 'WOOD': 0, 'SHEEP': 0}):
+        return self.resources["WHEAT"] + hypothetical_extra_resources["WHEAT"] >= 2 \
+            and self.resources["ORE"] + hypothetical_extra_resources["ORE"] >= 3
 
-    def can_buy_dev_card(self):
-        return self.resources["ORE"] > 0 and self.resources["SHEEP"] > 0 and self.resources["WHEAT"] > 0
+    def can_buy_dev_card(self, hypothetical_extra_resources={'ORE': 0, 'BRICK': 0,
+                                                             'WHEAT': 0, 'WOOD': 0, 'SHEEP': 0}):
+        return self.resources["ORE"] + hypothetical_extra_resources["ORE"] > 0 \
+            and self.resources["SHEEP"] + hypothetical_extra_resources["SHEEP"] > 0 and \
+                self.resources["WHEAT"] + hypothetical_extra_resources["WHEAT"] > 0
 
     def can_play_dev_card(self):
         return sum(self.devCards.values()) > 0 and not self.devCardPlayedThisTurn
 
-    def can_get_resources_through_trading(self, desired_resources):
+    def can_get_resources_through_trading(self, desired_resources, hypothetical_extra_resources):
         '''
         desired resources is a dict from resource string to amount desired
 
@@ -1279,6 +1438,8 @@ class dylanAIPlayer(player):
 
         # for each resource
         for resource in desired_resources.keys():
+            # add the hypothetical extra resources
+            theoretical_resources[resource] += hypothetical_extra_resources[resource]
             theoretical_resources[resource] -= desired_resources[resource]
 
         # while we can't pay for it
@@ -1598,19 +1759,22 @@ class dylanAIPlayer(player):
             for player in all_players:
                 # skip ourselves
                 if player != self:
-                    opponent_adjacent_hexes = self.get_adjacent_hexes_for_player(board, player, exclude_selves=True)         
+                    opponent_adjacent_hexes = self.get_adjacent_hexes_for_player(
+                        board, player, exclude_selves=True)
                     for adj_hex in opponent_adjacent_hexes:
                         if adj_hex not in all_valid_hexes:
                             all_valid_hexes.append(adj_hex)
 
-            # sort them from most opponent production to least           
-            all_valid_hexes.sort(reverse=True, key=lambda opp_hex: self.get_opponent_production_for_hex(board, opp_hex))
+            # sort them from most opponent production to least
+            all_valid_hexes.sort(
+                reverse=True, key=lambda opp_hex: self.get_opponent_production_for_hex(board, opp_hex))
 
             for opp_hex in all_valid_hexes:
                 if opp_hex in valid_robber_spots:
 
                     if debug:
-                        print("Moving to hex {}. Production blocked: {}".format(opp_hex, self.get_opponent_production_for_hex(board, opp_hex)))
+                        print("Moving to hex {}. Production blocked: {}".format(
+                            opp_hex, self.get_opponent_production_for_hex(board, opp_hex)))
 
                     self.move_robber(opp_hex, board, player)
                     return
@@ -1623,14 +1787,17 @@ class dylanAIPlayer(player):
                     # if this player has cards, or if everyone has zero cards
                     if sum(player.resources.values()) > 0 or all_have_zero:
 
-                        opponent_adjacent_hexes = self.get_adjacent_hexes_for_player(board, player, exclude_selves=True)                    
-                        opponent_adjacent_hexes.sort(reverse=True, key=lambda opp_hex: self.get_opponent_production_for_hex(board, opp_hex))
+                        opponent_adjacent_hexes = self.get_adjacent_hexes_for_player(
+                            board, player, exclude_selves=True)
+                        opponent_adjacent_hexes.sort(
+                            reverse=True, key=lambda opp_hex: self.get_opponent_production_for_hex(board, opp_hex))
 
                         for opp_hex in opponent_adjacent_hexes:
                             if opp_hex in valid_robber_spots:
 
                                 if debug:
-                                    print("Moving to hex {}. Production blocked: {}".format(opp_hex, self.get_opponent_production_for_hex(board, opp_hex)))
+                                    print("Moving to hex {}. Production blocked: {}".format(
+                                        opp_hex, self.get_opponent_production_for_hex(board, opp_hex)))
 
                                 self.move_robber(opp_hex, board, player)
                                 return
@@ -1654,7 +1821,7 @@ class dylanAIPlayer(player):
                         hexes.remove(adj_hex)
 
         return hexes
-    
+
     def get_opponent_production_for_hex(self, board, opp_hex):
         '''
         for a given hex, get its production points for each adjacent settlement/city and sum it
@@ -1667,7 +1834,7 @@ class dylanAIPlayer(player):
 
         # for each player
         for player in list(self.game.playerQueue.queue):
-            
+
             # for each of their settlements
             for settlement in player.buildGraph["SETTLEMENTS"]:
 
@@ -1696,9 +1863,8 @@ class dylanAIPlayer(player):
                 continue
             else:
                 return False
-            
-        return True
 
+        return True
 
     def play_knight(self, board):
         if self.devCardPlayedThisTurn:
