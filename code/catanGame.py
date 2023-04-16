@@ -22,7 +22,7 @@ class catanGame():
 
         # Game State variables
         self.gameOver = False
-        self.maxPoints = 8
+        self.maxPoints = 10
         self.numPlayers = 0
         self.playerPosition = -1
         self.numAIPlayers = -1
@@ -282,7 +282,7 @@ class catanGame():
                     # hiding cards and not ourself
                     print("{}:, Points: {}".format(
                         player_i.name, player_i.visibleVictoryPoints))
-                    #print('Dev Cards:{}'.format(player_i.devCards))
+                    # print('Dev Cards:{}'.format(player_i.devCards))
                     #print("RoadsLeft:{}, SettlementsLeft:{}, CitiesLeft:{}".format(player_i.roadsLeft, player_i.settlementsLeft, player_i.citiesLeft))
                     print('MaxRoadLength:{}, LongestRoad:{}, LargestArmy:{}\n'.format(
                         player_i.maxRoadLength, player_i.longestRoadFlag, player_i.largestArmyFlag))
@@ -297,7 +297,7 @@ class catanGame():
 
                 else:
                     # Player must discard resources
-                    # player_i.discardResources()
+                    player_i.discardResources()
                     a = 1
 
             # Logic for robber

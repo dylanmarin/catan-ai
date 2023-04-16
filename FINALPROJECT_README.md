@@ -1,27 +1,23 @@
 # TODO
 NEXT:
-using year of plenty instead of trading
-playing mono or road building
-
-get opponent resource count
-check if can build item with monopoly played
-check if can build with hypothetical additional resources
+offer a trade
+accept a trade
 
 
 make it point initial road to direciton of next best settlement they EXPECT to have. ie. first player points to 8th best settlement spot (6 picks before their next, plus they will have placed another before this intial settlement could theoretically expand)
 
-todo:
-HIGH:
-making moves
+backlog:
 
 MEDIUM: 
-pick a better resource when using year of plenty but only needing 1
+Fallback for if none of our logical options for placing the robber works
 implement resource synergy of a settlement
 Fix drawing in between placing settlements. something is not right
-Fallback for if none of our logical options for placing the robber works
 Deciding not to play a robber when blocked
+have monopoly not just choose the resource that has the most cards, choose the resource that would provide the most production of a desired resource
+
 
 LOW:
+make year of plently look past just whether or not it helps with the current item
 make trading ui on screen
 Bayesian inference on unplayed cards
 Counting resources in bank before dealing out cards
@@ -34,6 +30,11 @@ COMPLETED:
 
 4/16
 - play road building if it can’t build a road but wants to
+- using year of plenty instead of trading
+- playing mono or road building
+- get opponent resource count
+- check if can build item with monopoly played
+- check if can build with hypothetical additional resources
 
 
 4/13

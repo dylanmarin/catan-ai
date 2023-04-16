@@ -22,7 +22,12 @@ class catanBoard(hexTile, Vertex):
 
         # np.random.seed(121112)
         # np.random.seed(12512312)
-        np.random.seed(15444412)
+        # np.random.seed(15444412)
+        # np.random.seed(1597678912)
+        # np.random.seed(90812735)
+        # np.random.seed(12384524)
+        # np.random.seed(123414214)
+        np.random.seed(9185751)
 
 
         self.hexTileDict = {} #Dict to store all hextiles, with hexIndex as key

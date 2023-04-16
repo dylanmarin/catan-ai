@@ -403,9 +403,9 @@ class player():
             self.knightsPlayed += 1
 
         if (devCardPlayed == 'ROADBUILDER'):
-            game.build(self, 'ROAD')
+            game.build(self, 'ROAD', road_builder=True)
             game.boardView.displayGameScreen()
-            game.build(self, 'ROAD')
+            game.build(self, 'ROAD', road_builder=True)
             game.boardView.displayGameScreen()
 
         # Resource List for Year of Plenty and Monopoly
