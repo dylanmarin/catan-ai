@@ -30,6 +30,13 @@ search "IMPROVEMENT" for improvements that aren't TODO's
 
 COMPLETED:
 
+4/17
+- add offer trade mechanic
+- add accept/decline trade mechanic
+- integrate user offering trades to ai
+- integrate ai offering trade to user
+- add print function to player
+
 4/16
 - play road building if it can’t build a road but wants to
 - using year of plenty instead of trading

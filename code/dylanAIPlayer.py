@@ -510,8 +510,8 @@ class dylanAIPlayer(player):
             self.play_knight(board)
 
         moves_made = 0
+        made_successful_trade = False
 
-        self.propose_trade()
 
         able_to_do_something = True
         while able_to_do_something:
@@ -629,14 +629,29 @@ class dylanAIPlayer(player):
                             break
 
                     # we have gone through all options
-                    # cant build
-                    # cant port for it
+                    # cant build it
                     # cant roadbuilder, year of plenty, or monopoly for it
+                    # cant port for it
 
-                    # if we have gone through all options without doing anything, we don't need to loop again
-                    # TODO: propose trade should propose one trade and return true if accepted
-                    # able_to_do_something = self.propose_trade()
+                    # then:
+                    # try trading with other players for a resource we want
+
+                    # if we haven't already made a trade this turn
+                    if not made_successful_trade:
+                        # if we successfully made a trade
+                        if self.propose_trade(board, option):
+                            # try again since we got something we wanted
+                            able_to_do_something = True
+                            made_successful_trade = True
+                            break
+                        else:
+                            if debug:
+                                print("Tried to make a trade but was unable to")
+
+                    # if we couldnt trade for it continue to next option
                     continue
+
+        # after we've tried all options pass our turn
         return
 
     def can_play_monopoly(self):
@@ -2004,18 +2019,18 @@ class dylanAIPlayer(player):
     # Function to accept/reject trade - return True if accept
     # def accept_trade(self, r1_dict, r2_dict):
 
-    def propose_trade(self, board):
+    def propose_trade(self, board, option):
         '''
-        offers a trade to all other players
+        offers a trade to all other players with a specific option in mind
         '''
         # Select player to trade with - generate list of other players
         players = [p for p in list(self.game.playerQueue.queue)]
         players.remove(self)
 
-        resources_to_give, resources_to_receive = self.create_trade_offer()
+        resources_to_give, resources_to_receive = self.create_trade_offer(option)
 
         if sum(resources_to_give.values()) == 0 or sum(resources_to_receive.values()) == 0 or sum(self.resources.values()) == 0:
-            return
+            return False
 
         offered_resources_string = ""
         requested_resources_string = ""
@@ -2048,7 +2063,7 @@ class dylanAIPlayer(player):
                         other_player.resources[resource] -= receive_amount
                         print("{} successfully traded {} for {} with {}".format(
                             self.name, offered_resources_string, requested_resources_string, other_player.name))
-                        return
+                        return True
                 else:
                     print("{} rejected trade giving {} for {}".format(
                         other_player.name, offered_resources_string, requested_resources_string))
@@ -2068,6 +2083,7 @@ class dylanAIPlayer(player):
 
                 while not (answer.upper() == "Y" or answer.upper() == "N"):
                     try:
+                        other_player.print_player_info()
                         answer = input("{} offers you {} in return for {}. Do you accept? [Y/N]".format(
                             self.name, offered_resources_string, requested_resources_string))
                     except:
@@ -2084,13 +2100,13 @@ class dylanAIPlayer(player):
                         other_player.resources[resource] -= receive_amount
                     print("{} successfully traded {} for {} with {}".format(
                         self.name, offered_resources_string, requested_resources_string, other_player.name))
-                    return
+                    return True
                 else:
                     print("{} rejected trade giving {} for {}".format(
                         other_player.name, offered_resources_string, requested_resources_string))
-        return
+        return False
 
-    def create_trade_offer(self):
+    def create_trade_offer(self, option):
         '''
         outputs a dict of resources with the amount offered and the amount requested to receive
 
@@ -2098,8 +2114,31 @@ class dylanAIPlayer(player):
 
         request (for now 1 at most) of our desired resources and offer at most or givable resources
         '''
-        offering = {'ORE': 0, 'BRICK': 0, 'WHEAT': 0, 'WOOD': 0, 'SHEEP': 0}
         requesting = {'ORE': 0, 'BRICK': 0, 'WHEAT': 0, 'WOOD': 0, 'SHEEP': 0}
+        offering = {'ORE': 0, 'BRICK': 0, 'WHEAT': 0, 'WOOD': 0, 'SHEEP': 0}
+
+        for resource, amount in self.get_resources_needed_for(option).items():
+            # for our current option, request something we need
+            # if we need some of this resource
+            if amount > 0:
+                # request 1 of it
+                requesting[resource] = 1
+                break
+
+        for resource, amount in self.resources.items():
+            # only offer something you aren't requesting. AND only offer something you have
+            if requesting[resource] == 0 and self.resources[resource] > 0:
+                # consider offering 1 of this resource
+                offering = {'ORE': 0, 'BRICK': 0,
+                            'WHEAT': 0, 'WOOD': 0, 'SHEEP': 0}
+                offering[resource] = 1
+                # if we can trade this resource away without breaking current option
+                if self.can_trade_without_breaking(option, offering):
+                    # break and return
+                    break
+                else:
+                    # otherwise try the next resource
+                    continue
 
         return offering, requesting
 

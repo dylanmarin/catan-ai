@@ -142,7 +142,9 @@ class catanGame():
         # Build Settlements and roads of each player forwards
         for player_i in playerList:
             if (player_i.isAI):
+                time.sleep(0.1)
                 # AI player calls initial setup to place its first settlements and roads
+                self.boardView.displayGameScreen()
                 player_i.initial_setup(self.board)
                 self.boardView.displayGameScreen()
 
@@ -272,20 +274,10 @@ class catanGame():
 
                 # DYLAN UPDATING PRINTING TO HIDE OPPONENT CARDS
                 if not self.hide_ai_cards or i == self.playerPosition:
-                    print("{}:, Resources:{}, Points: {}".format(
-                        player_i.name, player_i.resources, player_i.victoryPoints))
-                    print('Dev Cards:{}'.format(player_i.devCards))
-                    print("RoadsLeft:{}, SettlementsLeft:{}, CitiesLeft:{}".format(player_i.roadsLeft, player_i.settlementsLeft, player_i.citiesLeft))
-                    print('MaxRoadLength:{}, LongestRoad:{}\n'.format(
-                        player_i.maxRoadLength, player_i.longestRoadFlag))
+                    player_i.print_player_info(resources=True, true_vp=True, dev_cards=True, buildings_left=True, road_and_army_info=True)
                 else:
-                    # hiding cards and not ourself
-                    print("{}:, Points: {}".format(
-                        player_i.name, player_i.visibleVictoryPoints))
-                    # print('Dev Cards:{}'.format(player_i.devCards))
-                    #print("RoadsLeft:{}, SettlementsLeft:{}, CitiesLeft:{}".format(player_i.roadsLeft, player_i.settlementsLeft, player_i.citiesLeft))
-                    print('MaxRoadLength:{}, LongestRoad:{}, LargestArmy:{}\n'.format(
-                        player_i.maxRoadLength, player_i.longestRoadFlag, player_i.largestArmyFlag))
+                    player_i.print_player_info(resources=False, true_vp=False, dev_cards=False, buildings_left=False, road_and_army_info=True)
+
 
         # Logic for a 7 roll
         else:
@@ -305,9 +297,15 @@ class catanGame():
                 currentPlayer.place_robber(self.board)
             else:
                 self.robber(currentPlayer)
-                self.boardView.displayGameScreen()  # Update back to original gamescreen
-            print("Player:{}, Resources:{}, Points: {}".format(
-                currentPlayer.name, currentPlayer.resources, currentPlayer.victoryPoints))
+                self.boardView.displayGameScreen()  # Update back to original gamescreen                    
+                
+        # print current_player last always
+        if not currentPlayer.isAI or not self.hide_ai_cards:
+            player_i.print_player_info(resources=True, true_vp=True, dev_cards=True, buildings_left=True, road_and_army_info=True)
+        else:
+            player_i.print_player_info(resources=False, true_vp=False, dev_cards=False, buildings_left=False, road_and_army_info=True)
+
+
 
     # function to check if a player has the longest road - after building latest road
 
@@ -406,9 +404,12 @@ class catanGame():
                         # Check if AI player gets longest road/largest army and update Victory points
                         self.check_longest_road(currPlayer)
                         self.check_largest_army(currPlayer)
-                        print("Player:{}, Resources:{}, Points: {}".format(
-                            currPlayer.name, currPlayer.resources, currPlayer.victoryPoints))
-
+                        
+                        if self.hide_ai_cards:
+                            currPlayer.print_player_info(resources=False, true_vp=False, dev_cards=False, buildings_left=False, road_and_army_info=True)
+                        else:
+                            currPlayer.print_player_info()
+                            
                         self.boardView.displayGameScreen()  # Update back to original gamescreen
                         turnOver = True
 
@@ -441,8 +442,7 @@ class catanGame():
                                         # Check if player gets longest road and update Victory points
                                         self.check_longest_road(currPlayer)
                                         # Show updated points and resources
-                                        print("Player:{}, Resources:{}, Points: {}".format(
-                                            currPlayer.name, currPlayer.resources, currPlayer.victoryPoints))
+                                        currPlayer.print_player_info()
 
                                 # Check if player wants to build settlement
                                 if (self.boardView.buildSettlement_button.collidepoint(e.pos)):
@@ -451,8 +451,7 @@ class catanGame():
                                         self.build(currPlayer, 'SETTLE')
                                         self.boardView.displayGameScreen()  # Update back to original gamescreen
                                         # Show updated points and resources
-                                        print("Player:{}, Resources:{}, Points: {}".format(
-                                            currPlayer.name, currPlayer.resources, currPlayer.victoryPoints))
+                                        currPlayer.print_player_info()
 
                                 # Check if player wants to build city
                                 if (self.boardView.buildCity_button.collidepoint(e.pos)):
@@ -460,16 +459,14 @@ class catanGame():
                                         self.build(currPlayer, 'CITY')
                                         self.boardView.displayGameScreen()  # Update back to original gamescreen
                                         # Show updated points and resources
-                                        print("Player:{}, Resources:{}, Points: {}".format(
-                                            currPlayer.name, currPlayer.resources, currPlayer.victoryPoints))
+                                        currPlayer.print_player_info()
 
                                 # Check if player wants to draw a development card
                                 if (self.boardView.devCard_button.collidepoint(e.pos)):
                                     if (diceRolled == True):  # Can only draw devCard after rolling dice
                                         currPlayer.draw_devCard(self.board)
                                         # Show updated points and resources
-                                        print("Player:{}, Resources:{}, Points: {}".format(
-                                            currPlayer.name, currPlayer.resources, currPlayer.victoryPoints))
+                                        currPlayer.print_player_info()
                                         print('Available Dev Cards:',
                                               currPlayer.devCards)
 
@@ -482,24 +479,19 @@ class catanGame():
                                     self.check_largest_army(currPlayer)
                                     self.check_longest_road(currPlayer)
                                     # Show updated points and resources
-                                    print("Player:{}, Resources:{}, Points: {}".format(
-                                        currPlayer.name, currPlayer.resources, currPlayer.victoryPoints))
-                                    print('Available Dev Cards:',
-                                          currPlayer.devCards)
+                                    currPlayer.print_player_info()
 
                                 # Check if player wants to trade with the bank
                                 if (self.boardView.tradeBank_button.collidepoint(e.pos)):
                                     currPlayer.initiate_trade(self.board, self, 'BANK')
                                     # Show updated points and resources
-                                    print("Player:{}, Resources:{}, Points: {}".format(
-                                        currPlayer.name, currPlayer.resources, currPlayer.victoryPoints))
+                                    currPlayer.print_player_info()
 
                                 # Check if player wants to trade with another player
                                 if (self.boardView.tradePlayers_button.collidepoint(e.pos)):
                                     currPlayer.initiate_trade(self.board, self, 'PLAYER')
                                     # Show updated points and resources
-                                    print("Player:{}, Resources:{}, Points: {}".format(
-                                        currPlayer.name, currPlayer.resources, currPlayer.victoryPoints))
+                                    currPlayer.print_player_info()
 
                                 # Check if player wants to end turn
                                 if (self.boardView.endTurn_button.collidepoint(e.pos)):

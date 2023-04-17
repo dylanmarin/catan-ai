@@ -506,6 +506,8 @@ class player():
             return
 
         elif trade_type == 'PLAYER':
+
+            
             # Select player to trade with - generate list of other players
             playerNames = [p.name for p in list(game.playerQueue.queue)]
 
@@ -544,17 +546,15 @@ class player():
                 except:
                     print("Please input a valid amount")
 
-
             # Player to select resource to receive - disallow receiving same resource as traded
             resourceToReceive = ""
             while (resourceToReceive not in self.resources.keys()) or (resourceToReceive == resourceToTrade):
                 resourceToReceive = input(
                     "Enter resource name to receive from player {}:".format(playerToTrade_name)).upper()
                 # Reset if invalid resource is chosen
-                if resourceToReceive in self.resources.keys() and playerToTrade.resources[resourceToReceive] == 0:
-                    resourceToReceive = -""
-                    print("Player {} doesn't have any {} to trade".format(
-                        playerToTrade_name, resourceToReceive))
+                if resourceToReceive not in self.resources.keys():
+                    print("Please input valid resource")
+                    resourceToReceive = ""
 
             # Specify quantity to receive
             resource_received_amount = 0
@@ -567,14 +567,15 @@ class player():
                     print("Please input a valid amount")
 
             # DYLAN ADD CODE FOR ACTUALLY ASKING AI IF THEY WANT TO TRADE
-            
-            offering = {'ORE': 0, 'BRICK': 0, 'WHEAT': 0, 'WOOD': 0, 'SHEEP': 0}
-            requesting = {'ORE': 0, 'BRICK': 0, 'WHEAT': 0, 'WOOD': 0, 'SHEEP': 0}
+
+            offering = {'ORE': 0, 'BRICK': 0,
+                        'WHEAT': 0, 'WOOD': 0, 'SHEEP': 0}
+            requesting = {'ORE': 0, 'BRICK': 0,
+                          'WHEAT': 0, 'WOOD': 0, 'SHEEP': 0}
 
             for resource in offering:
                 offering[resource] = resource_traded_amount
                 requesting[resource] = resource_received_amount
-
 
             if playerToTrade.isAI:
 
@@ -588,8 +589,11 @@ class player():
                     playerToTrade.resources[resourceToReceive] -= resource_received_amount
                     playerToTrade.resources[resourceToTrade] += resource_traded_amount
 
-                print("Player {} successfully traded {} {} for {} {} with player {}".format(self.name, resource_traded_amount, resourceToTrade,
-                                                                                            resource_received_amount, resourceToReceive, playerToTrade_name))
+                    print("Player {} successfully traded {} {} for {} {} with player {}".format(self.name, resource_traded_amount, resourceToTrade,
+                                                                                                resource_received_amount, resourceToReceive, playerToTrade_name))
+                else:
+                    print("{} rejected trade for {} {} for {} {} with player {}".format(self.name, resource_traded_amount, resourceToTrade,
+                                                                                        resource_received_amount, resourceToReceive, playerToTrade_name))
 
             return
 
@@ -633,3 +637,30 @@ class player():
             print("\nPlayer {} has {} cards and does not need to discard any cards!".format(
                 self.name, totalResourceCount))
             return
+
+    # DYLAN: added print function
+
+    def print_player_info(self, resources=True, true_vp=True, dev_cards=True, buildings_left=True, road_and_army_info=True):
+
+        vp_to_show = self.victoryPoints
+        if not true_vp:
+            vp_to_show = self.visibleVictoryPoints
+
+        print("Player:{}, Points: {}".format(
+            self.name, vp_to_show))
+        
+        if resources:
+            print("- Resources:{}".format(self.resources))
+        
+        if dev_cards:
+            print('- Available Dev Cards: {}'.format(self.devCards))
+
+        if buildings_left:
+            print("- RoadsLeft:{}, SettlementsLeft:{}, CitiesLeft:{}".format(
+                self.roadsLeft, self.settlementsLeft, self.citiesLeft))
+        
+        if road_and_army_info:
+            print('- MaxRoadLength:{}, LongestRoad:{}, LargestArmy:{}\n'.format(
+                self.maxRoadLength, self.longestRoadFlag, self.largestArmyFlag))
+            
+        

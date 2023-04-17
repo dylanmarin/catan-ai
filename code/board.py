@@ -27,7 +27,8 @@ class catanBoard(hexTile, Vertex):
         # np.random.seed(90812735)
         # np.random.seed(12384524)
         # np.random.seed(123414214)
-        np.random.seed(9185751)
+        # np.random.seed(9185751) # triple wheat
+        np.random.seed(1239834345)
 
 
         self.hexTileDict = {} #Dict to store all hextiles, with hexIndex as key
