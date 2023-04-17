@@ -104,6 +104,7 @@ class player():
                 self.resources['WHEAT'] -= 1
 
                 self.victoryPoints += 1
+                self.visibleVictoryPoints += 1
                 # update the overall boardGraph
                 board.updateBoardGraph_settlement(vCoord, self)
 
@@ -159,6 +160,7 @@ class player():
                 self.resources['ORE'] -= 3
                 self.resources['WHEAT'] -= 2
                 self.victoryPoints += 1
+                self.visibleVictoryPoints += 1
 
                 # update the overall boardGraph
                 board.updateBoardGraph_city(vCoord, self)
@@ -306,7 +308,7 @@ class player():
         'Pass turn to next player and update game state'
 
     # function to draw a Development Card
-    def draw_devCard(self, board):
+    def draw_devCard(self, board, show_card=False):
         'Draw a random dev card from stack and update self.devcards'
         # Check if player has resources available
         if (self.resources['WHEAT'] >= 1 and self.resources['ORE'] >= 1 and self.resources['SHEEP'] >= 1):
@@ -343,8 +345,9 @@ class player():
                 self.newDevCards.append(cardDrawn)
                 board.devCardStack[cardDrawn] -= 1
 
-            print("{} drew a {} from Development Card Stack".format(
-                self.name, cardDrawn))
+            if show_card:
+                print("{} drew a {} from Development Card Stack".format(
+                    self.name, cardDrawn))
 
         else:
             print("Insufficient Resources for Dev Card. Cost: 1 ORE, 1 WHEAT, 1 SHEEP")
@@ -653,9 +656,13 @@ class player():
 
         if resources:
             print("- Resources:{}".format(self.resources))
+        else: 
+            print("- Resources:{}".format(sum(self.resources.values())))
 
         if dev_cards:
             print('- Available Dev Cards: {}'.format(self.devCards))
+        else:
+            print('- Dev Cards: {}'.format(sum(self.devCards.values())))
 
         if buildings_left:
             print("- RoadsLeft:{}, SettlementsLeft:{}, CitiesLeft:{}".format(

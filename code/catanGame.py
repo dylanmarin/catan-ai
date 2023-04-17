@@ -330,9 +330,11 @@ class catanGame():
                     if (p.longestRoadFlag):
                         p.longestRoadFlag = False
                         p.victoryPoints -= 2
+                        p.visibleVictoryPoints -= 2
                         prevPlayer = 'from Player ' + p.name
 
                 player_i.longestRoadFlag = True
+                p.visibleVictoryPoints += 2
                 player_i.victoryPoints += 2
 
                 print("Player {} takes Longest Road {}".format(
@@ -355,10 +357,12 @@ class catanGame():
                     if (p.largestArmyFlag):
                         p.largestArmyFlag = False
                         p.victoryPoints -= 2
+                        p.visibleVictoryPoints -= 2
                         prevPlayer = 'from Player ' + p.name
 
                 player_i.largestArmyFlag = True
                 player_i.victoryPoints += 2
+                player_i.visibleVictoryPoints += 2
 
                 print("Player {} takes Largest Army {}".format(
                     player_i.name, prevPlayer))
@@ -469,7 +473,7 @@ class catanGame():
                                 # Check if player wants to draw a development card
                                 if (self.boardView.devCard_button.collidepoint(e.pos)):
                                     if (diceRolled == True):  # Can only draw devCard after rolling dice
-                                        currPlayer.draw_devCard(self.board)
+                                        currPlayer.draw_devCard(self.board, show_card=True)
                                         # Show updated points and resources
                                         currPlayer.print_player_info()
                                         print('Available Dev Cards:',

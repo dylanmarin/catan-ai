@@ -500,7 +500,7 @@ class dylanAIPlayer(player):
                 see if porting or trading with bank allows us to do it
 
         '''
-        debug = True
+        debug = False
         # we may have already played a knight before rolling
         # may have rolled a 7 and moved the robber AND discarded cards
 
@@ -1300,8 +1300,6 @@ class dylanAIPlayer(player):
         roads are desired if we have 0 possible settlement spots.
 
         roads are desired if we are tied for longest road
-
-        for now, thats it
         '''
         utility = 0
         if (self.roadsLeft == 0) or len(board.get_potential_roads(self)) == 0:
@@ -2026,7 +2024,7 @@ class dylanAIPlayer(player):
         '''
         offers a trade to all other players with a specific option in mind
         '''
-        debug = True
+        debug = False
 
         # Select player to trade with - generate list of other players
         players = [p for p in list(self.game.playerQueue.queue)]
@@ -2166,7 +2164,7 @@ class dylanAIPlayer(player):
         - determine whether we should accept trades that would put us over 7 cards based on how many rolls until we play
 
         '''
-        if sum(self.resources.values()) == 0:
+        if sum(self.resources.values()) == 0 or sum(to_receive.values()) == 0 or sum(to_give.values()) == 0:
             return False
 
         # if we dont even have any, decline

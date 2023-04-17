@@ -1,7 +1,5 @@
 # TODO
 NEXT:
-offer a trade to other ai. least desired card for most desired card
-accept a trade from another ai
 
 
 
@@ -17,7 +15,6 @@ Fix drawing in between placing settlements. something is not right
 Deciding not to play a robber when blocked
 have monopoly not just choose the resource that has the most cards, choose the resource that would provide the most production of a desired resource
 
-
 LOW:
 make year of plently look past just whether or not it helps with the current item
 make trading ui on screen
@@ -27,7 +24,6 @@ Counting resources in bank before dealing out cards
 NOTES:
 search "IMPROVEMENT" for improvements that aren't TODO's
 
-
 COMPLETED:
 
 4/17
@@ -36,6 +32,8 @@ COMPLETED:
 - integrate user offering trades to ai
 - integrate ai offering trade to user
 - add print function to player
+- offer a trade to other ai. least desired card for most desired card
+- accept a trade from another ai
 
 4/16
 - play road building if it can’t build a road but wants to
@@ -88,7 +86,6 @@ COMPLETED:
 - seed the random for testing
 - road placement
 
-
 4/5:
 - make font a bit more readable in gameView.py
 - in player.py make the PLAYER has placed a settlement message more readable
@@ -100,11 +97,3 @@ COMPLETED:
 
 
 
-
-
-## Project Changes
-- catanGame.py -rerouted function calls to use my ai and take in any number of players and any number of ai players
-- dylanAIPlayer.py -implementation of my ai implementation
-
-
-## 
