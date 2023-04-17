@@ -511,6 +511,8 @@ class dylanAIPlayer(player):
 
         moves_made = 0
 
+        self.propose_trade()
+
         able_to_do_something = True
         while able_to_do_something:
             able_to_do_something = False
@@ -593,8 +595,7 @@ class dylanAIPlayer(player):
                                 print(
                                     "Can't use monopoly for {}".format(option))
 
-
-                    # if we have < 7 cards and couldnt play a dev card, 
+                    # if we have < 7 cards and couldnt play a dev card,
                     # discard lower rated options that will hinder our current goal
                     if sum(self.resources.values()) <= 7:
                         goals_to_remove = self.remove_conflicting_goals(
@@ -624,7 +625,7 @@ class dylanAIPlayer(player):
                                 print("{} was unable to trade for {} and still has {} cards".format(
                                     self.name, option, sum(self.resources.values())))
                             # if we couldn't trade for something, then we can keep lower rated options in the queue
-                            # cant trade or play any devs. just break   
+                            # cant trade or play any devs. just break
                             break
 
                     # we have gone through all options
@@ -642,11 +643,13 @@ class dylanAIPlayer(player):
         return self.devCards["MONOPOLY"] > 0 and not self.devCardPlayedThisTurn
 
     def can_build_with_monopoly(self, option, board):
-        valid_resource_options=  []
+        valid_resource_options = []
 
         for resource in self.resources.keys():
-            hypothetical_additional_resources = {'ORE': 0, 'BRICK': 0, 'WHEAT': 0, 'WOOD': 0, 'SHEEP': 0}
-            hypothetical_additional_resources[resource] = self.get_opponent_count(resource)
+            hypothetical_additional_resources = {
+                'ORE': 0, 'BRICK': 0, 'WHEAT': 0, 'WOOD': 0, 'SHEEP': 0}
+            hypothetical_additional_resources[resource] = self.get_opponent_count(
+                resource)
 
             if self.able_to_do(option, board, hypothetical_additional_resources) or self.able_to_trade_for(option, hypothetical_additional_resources):
                 valid_resource_options.append(resource)
@@ -670,15 +673,17 @@ class dylanAIPlayer(player):
 
         # TODO: incorporate the idea that fewer cards may be better because of different port access
 
-        best_resource = max(resource_options, key= lambda resource: self.get_opponent_count(resource))
+        best_resource = max(
+            resource_options, key=lambda resource: self.get_opponent_count(resource))
         resources_taken = 0
         for player in list(self.game.playerQueue.queue):
-                if (player != self):
-                    self.resources[best_resource] += player.resources[best_resource]
-                    resources_taken += player.resources[best_resource]
-                    player.resources[best_resource] = 0
+            if (player != self):
+                self.resources[best_resource] += player.resources[best_resource]
+                resources_taken += player.resources[best_resource]
+                player.resources[best_resource] = 0
 
-        print("Playing MONOPOLY. Stole {} {}".format(resources_taken, best_resource))
+        print("Playing MONOPOLY. Stole {} {}".format(
+            resources_taken, best_resource))
         self.devCardPlayedThisTurn = True
         self.devCards["MONOPOLY"] -= 1
         return
@@ -692,6 +697,9 @@ class dylanAIPlayer(player):
         return sum(resources_needed.values()) == 2
 
     def get_resources_needed_for(self, option):
+        '''
+        returns a dict of resources with the amount we need to build the given option
+        '''
         option_cost = self.option_to_resources_required_dict[option]
 
         resource_need_dict = {}
@@ -722,11 +730,11 @@ class dylanAIPlayer(player):
                 print("Using YEAROFPLENTY for 1 {}".format(resource))
                 resources_bought += 1
 
-
-        while resources_bought < 2:    
+        while resources_bought < 2:
             # NOTE: Code was changed so that YOP is only played when we need exactly 2 cards, so this shouldn't be reached
             # TODO: DONT randomly pick a resource
-            random_resource = list(self.resources.keys())[np.random.randint(0, 5)]
+            random_resource = list(self.resources.keys())[
+                np.random.randint(0, 5)]
             self.resources[random_resource] += 1
             print("Using YEAROFPLENTY for 1 {}".format(random_resource))
             resources_bought += 1
@@ -982,7 +990,6 @@ class dylanAIPlayer(player):
                     print(
                         "Road gives 3-degree access to longest road. Utility {}".format(utility))
 
-
         # if we can build more settlements, potential settlement spots should be taken into account
         if self.settlementsLeft >= 1:
 
@@ -1024,7 +1031,7 @@ class dylanAIPlayer(player):
 
             if len(three_degree_settlement_spots) > 0:
                 best_settlement = max(three_degree_settlement_spots,
-                                    key=lambda settle: self.evaluateSettlement(board, settle))
+                                      key=lambda settle: self.evaluateSettlement(board, settle))
                 utility += (0.1) * settlement_base_utility * \
                     self.evaluateSettlement(board, best_settlement)
                 if debug:
@@ -1203,7 +1210,7 @@ class dylanAIPlayer(player):
         return
 
     def able_to_do(self, option, board, hypothetical_extra_resources={'ORE': 0, 'BRICK': 0,
-                                                         'WHEAT': 0, 'WOOD': 0, 'SHEEP': 0}):
+                                                                      'WHEAT': 0, 'WOOD': 0, 'SHEEP': 0}):
         '''
         helper function given a key (string) determines whether we can immediately do said option
         with our current resources
@@ -1220,7 +1227,7 @@ class dylanAIPlayer(player):
             return self.can_play_dev_card(hypothetical_extra_resources)
 
     def able_to_trade_for(self, option, hypothetical_extra_resources={'ORE': 0, 'BRICK': 0,
-                                                         'WHEAT': 0, 'WOOD': 0, 'SHEEP': 0}):
+                                                                      'WHEAT': 0, 'WOOD': 0, 'SHEEP': 0}):
         '''
         helper function given a key (string) determines whether we can trade with bank/ports to get desired item
         '''
@@ -1437,12 +1444,13 @@ class dylanAIPlayer(player):
             and self.resources["ORE"] + hypothetical_extra_resources["ORE"] >= 3
 
     def can_buy_dev_card(self, board, hypothetical_extra_resources={'ORE': 0, 'BRICK': 0,
-                                                             'WHEAT': 0, 'WOOD': 0, 'SHEEP': 0}):
-        
+                                                                    'WHEAT': 0, 'WOOD': 0, 'SHEEP': 0}):
+
         if sum(board.devCardStack.values()) > 0:
             return self.resources["ORE"] + hypothetical_extra_resources["ORE"] > 0 \
                 and self.resources["SHEEP"] + hypothetical_extra_resources["SHEEP"] > 0 and \
-                    self.resources["WHEAT"] + hypothetical_extra_resources["WHEAT"] > 0
+                self.resources["WHEAT"] + \
+                hypothetical_extra_resources["WHEAT"] > 0
         else:
             return False
 
@@ -1811,7 +1819,7 @@ class dylanAIPlayer(player):
 
                     # if this player has cards, or if everyone has zero cards
                     if sum(player.resources.values()) > 0 or all_have_zero:
-                        
+
                         if debug:
                             print("Attempting to rob from {}".format(player.name))
 
@@ -1995,3 +2003,177 @@ class dylanAIPlayer(player):
 
     # Function to accept/reject trade - return True if accept
     # def accept_trade(self, r1_dict, r2_dict):
+
+    def propose_trade(self, board):
+        '''
+        offers a trade to all other players
+        '''
+        # Select player to trade with - generate list of other players
+        players = [p for p in list(self.game.playerQueue.queue)]
+        players.remove(self)
+
+        resources_to_give, resources_to_receive = self.create_trade_offer()
+
+        if sum(resources_to_give.values()) == 0 or sum(resources_to_receive.values()) == 0 or sum(self.resources.values()) == 0:
+            return
+
+        offered_resources_string = ""
+        requested_resources_string = ""
+
+        for resource in resources_to_give.keys():
+            give_amount = resources_to_give[resource]
+            receive_amount = resources_to_receive[resource]
+            if give_amount > 0:
+                offered_resources_string += "{} {}, ".format(
+                    give_amount, resource)
+            if receive_amount > 0:
+                requested_resources_string += "{} {}, ".format(
+                    receive_amount, resource)
+
+        offered_resources_string = offered_resources_string[:-2]
+        requested_resources_string = requested_resources_string[:-2]
+
+        for other_player in players:
+            if other_player.isAI:
+
+                # if accept
+                if other_player.accept_or_decline_trade(board, resources_to_receive, resources_to_give):
+                    for resource, give_amount in resources_to_give.items():
+                        receive_amount = resources_to_receive[resource]
+
+                        self.resources[resource] -= give_amount
+                        self.resources[resource] += receive_amount
+
+                        other_player.resources[resource] += give_amount
+                        other_player.resources[resource] -= receive_amount
+                        print("{} successfully traded {} for {} with {}".format(
+                            self.name, offered_resources_string, requested_resources_string, other_player.name))
+                        return
+                else:
+                    print("{} rejected trade giving {} for {}".format(
+                        other_player.name, offered_resources_string, requested_resources_string))
+                    continue
+
+            else:
+                # for real player:
+                answer = ""
+
+                # first check if the player has all of requested resources
+                for resource, amount in resources_to_receive.items():
+
+                    # their amount < actual amount
+                    if other_player.resources[resource] < amount:
+                        # auto decline if they don't have enough of any of the resources
+                        answer = "N"
+
+                while not (answer.upper() == "Y" or answer.upper() == "N"):
+                    try:
+                        answer = input("{} offers you {} in return for {}. Do you accept? [Y/N]".format(
+                            self.name, offered_resources_string, requested_resources_string))
+                    except:
+                        print("Please input 'Y' or 'N'")
+
+                if answer.upper() == "Y":
+                    for resource, give_amount in resources_to_give.items():
+                        receive_amount = resources_to_receive[resource]
+
+                        self.resources[resource] -= give_amount
+                        self.resources[resource] += receive_amount
+
+                        other_player.resources[resource] += give_amount
+                        other_player.resources[resource] -= receive_amount
+                    print("{} successfully traded {} for {} with {}".format(
+                        self.name, offered_resources_string, requested_resources_string, other_player.name))
+                    return
+                else:
+                    print("{} rejected trade giving {} for {}".format(
+                        other_player.name, offered_resources_string, requested_resources_string))
+        return
+
+    def create_trade_offer(self):
+        '''
+        outputs a dict of resources with the amount offered and the amount requested to receive
+
+        function itself ensures that there are no common resources being traded i.e. brick for brick
+
+        request (for now 1 at most) of our desired resources and offer at most or givable resources
+        '''
+        offering = {'ORE': 0, 'BRICK': 0, 'WHEAT': 0, 'WOOD': 0, 'SHEEP': 0}
+        requesting = {'ORE': 0, 'BRICK': 0, 'WHEAT': 0, 'WOOD': 0, 'SHEEP': 0}
+
+        return offering, requesting
+
+    def accept_or_decline_trade(self, board, to_receive, to_give):
+        '''
+        auto reject if we have no cards
+
+        IMPROVEMENTS: 
+        - check how MUCH it helps our hand
+        - determine whether we should accept trades that would put us over 7 cards based on how many rolls until we play
+
+        '''
+        if sum(self.resources.values()) == 0:
+            return False
+
+        move_goals = self.get_move_goals(board)
+        options = list(move_goals.keys())
+        options.sort(reverse=True, key=lambda goal: move_goals[goal])
+
+        # if the trade hurts our top 2 goals, decline
+        if not self.can_trade_without_breaking(options[0], to_give) or not self.can_trade_without_breaking(options[1], to_give):
+            return False
+
+        # if it is one of the resources we want
+        for resource, amount in to_receive.items():
+            if amount > 0:
+                # if we need this resource for either of our top two options, accept the trade
+                if self.get_resources_needed_for(options[0])[resource] + self.get_resources_needed_for(options[1])[resource] > 0:
+                    return True
+
+        return False
+
+    def can_trade_without_breaking(self, build_option, resources_to_give):
+        '''
+        given two options, determine whether we have enough resources to do the breaking option without going below what is needed for the build option
+
+        return true if we can build our breaking option and we have not gone below what cards are needed for the build option
+        '''
+        debug = False
+
+        # dict from option to a DICT OF RESOURCE:NUMBER representing the cost for the option
+        cost_of_build_option = self.option_to_resources_required_dict[build_option]
+
+        if debug:
+            print("Checking if {} conflicts with {}".format(
+                resources_to_give, build_option))
+
+        # for each resource
+        for resource in cost_of_build_option.keys():
+
+            current_amount = self.resources[resource]
+            required_amount = cost_of_build_option[resource]
+            possible_breaking_amount = resources_to_give[resource]
+
+            # if we don't need this resource for either of the build options, it doesnt matter
+            # if we dont have the resource, then building anything cant decrease this below the threshold
+            if required_amount == 0 or possible_breaking_amount == 0 or current_amount == 0:
+                if debug:
+                    print(" It does not conflict")
+                continue
+
+            if debug:
+                print(" For {}, we have {} {}, we need {}, and want {} of {}".format(
+                    build_option, current_amount, resource, required_amount, possible_breaking_amount, resource))
+                print(" If we made the trade, we'd have {} {} remaining for {}".format(
+                    current_amount-possible_breaking_amount, resource, build_option))
+
+            # if our current amount minus the cost of the breaking option is less than what we need for our
+            # build option, it would break our resources for the build optoin
+            if current_amount - possible_breaking_amount < required_amount:
+                if debug:
+                    print(" It DOES conflict")
+                return False
+
+            if debug:
+                print()
+        return True

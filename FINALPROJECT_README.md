@@ -1,7 +1,9 @@
 # TODO
 NEXT:
-offer a trade
-accept a trade
+offer a trade to other ai. least desired card for most desired card
+accept a trade from another ai
+
+
 
 
 make it point initial road to direciton of next best settlement they EXPECT to have. ie. first player points to 8th best settlement spot (6 picks before their next, plus they will have placed another before this intial settlement could theoretically expand)
@@ -35,6 +37,9 @@ COMPLETED:
 - get opponent resource count
 - check if can build item with monopoly played
 - check if can build with hypothetical additional resources
+- made it so that road desire didnt consider possible settlements if it used all 5 settlements in order to make cities more valuable
+- fixed bugs related to the remaining dev cards in the stack (trying to buy when none are left)
+- 
 
 
 4/13

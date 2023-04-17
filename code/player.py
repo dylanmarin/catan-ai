@@ -476,7 +476,7 @@ class player():
 
     # Function to initate a trade - with bank or other players
 
-    def initiate_trade(self, game, trade_type):
+    def initiate_trade(self, board, game, trade_type):
         '''Wrapper function to initiate a trade with bank or other players
         trade_type: flag to determine the trade
         '''
@@ -566,16 +566,30 @@ class player():
                 except:
                     print("Please input a valid amount")
 
-            # Execute trade - player gives resource traded and gains resource received
-            self.resources[resourceToReceive] += resource_received_amount
-            self.resources[resourceToTrade] -= resource_traded_amount
+            # DYLAN ADD CODE FOR ACTUALLY ASKING AI IF THEY WANT TO TRADE
+            
+            offering = {'ORE': 0, 'BRICK': 0, 'WHEAT': 0, 'WOOD': 0, 'SHEEP': 0}
+            requesting = {'ORE': 0, 'BRICK': 0, 'WHEAT': 0, 'WOOD': 0, 'SHEEP': 0}
 
-            # Other player gains resource traded and gives resource received
-            playerToTrade.resources[resourceToReceive] -= resource_received_amount
-            playerToTrade.resources[resourceToTrade] += resource_traded_amount
+            for resource in offering:
+                offering[resource] = resource_traded_amount
+                requesting[resource] = resource_received_amount
 
-            print("Player {} successfully traded {} {} for {} {} with player {}".format(self.name, resource_traded_amount, resourceToTrade,
-                                                                                        resource_received_amount, resourceToReceive, playerToTrade_name))
+
+            if playerToTrade.isAI:
+
+                if playerToTrade.accept_or_decline_trade(board, offering, requesting):
+
+                    # Execute trade - player gives resource traded and gains resource received
+                    self.resources[resourceToReceive] += resource_received_amount
+                    self.resources[resourceToTrade] -= resource_traded_amount
+
+                    # Other player gains resource traded and gives resource received
+                    playerToTrade.resources[resourceToReceive] -= resource_received_amount
+                    playerToTrade.resources[resourceToTrade] += resource_traded_amount
+
+                print("Player {} successfully traded {} {} for {} {} with player {}".format(self.name, resource_traded_amount, resourceToTrade,
+                                                                                            resource_received_amount, resourceToReceive, playerToTrade_name))
 
             return
 
