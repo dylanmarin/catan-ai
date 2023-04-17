@@ -510,12 +510,13 @@ class dylanAIPlayer(player):
             self.play_knight(board)
 
         moves_made = 0
-        made_successful_trade = False
 
 
         able_to_do_something = True
         while able_to_do_something:
             able_to_do_something = False
+            made_successful_trade = False
+
             # while we are able to do something
             move_goals = self.get_move_goals(board)
 
@@ -636,17 +637,19 @@ class dylanAIPlayer(player):
                     # then:
                     # try trading with other players for a resource we want
 
-                    # if we haven't already made a trade this turn
-                    if not made_successful_trade:
-                        # if we successfully made a trade
-                        if self.propose_trade(board, option):
-                            # try again since we got something we wanted
-                            able_to_do_something = True
-                            made_successful_trade = True
-                            break
-                        else:
-                            if debug:
-                                print("Tried to make a trade but was unable to")
+                    # if this option is our first choice
+                    if max(move_goals, key=move_goals.get) == option:
+                        # if we haven't already made a trade this turn
+                        if not made_successful_trade:
+                            # if we successfully made a trade
+                            if self.propose_trade(board, option):
+                                # try again since we got something we wanted
+                                able_to_do_something = True
+                                made_successful_trade = True
+                                break
+                            else:
+                                if debug:
+                                    print("Tried to make a trade but was unable to")
 
                     # if we couldnt trade for it continue to next option
                     continue
@@ -2023,6 +2026,8 @@ class dylanAIPlayer(player):
         '''
         offers a trade to all other players with a specific option in mind
         '''
+        debug = True
+
         # Select player to trade with - generate list of other players
         players = [p for p in list(self.game.playerQueue.queue)]
         players.remove(self)
@@ -2048,11 +2053,16 @@ class dylanAIPlayer(player):
         offered_resources_string = offered_resources_string[:-2]
         requested_resources_string = requested_resources_string[:-2]
 
+        print("{} is offering {} for {}".format(self.name, offered_resources_string, requested_resources_string))
+
+        if debug:
+            self.print_player_info()
+
         for other_player in players:
             if other_player.isAI:
 
                 # if accept
-                if other_player.accept_or_decline_trade(board, resources_to_receive, resources_to_give):
+                if other_player.accept_or_decline_trade(board, resources_to_give, resources_to_receive):
                     for resource, give_amount in resources_to_give.items():
                         receive_amount = resources_to_receive[resource]
 
@@ -2117,9 +2127,14 @@ class dylanAIPlayer(player):
         requesting = {'ORE': 0, 'BRICK': 0, 'WHEAT': 0, 'WOOD': 0, 'SHEEP': 0}
         offering = {'ORE': 0, 'BRICK': 0, 'WHEAT': 0, 'WOOD': 0, 'SHEEP': 0}
 
-        for resource, amount in self.get_resources_needed_for(option).items():
+        resources_needed = self.get_resources_needed_for(option)
+        resource_list = list(resources_needed.keys())
+        np.random.shuffle(resource_list)
+
+        for resource in resource_list:
             # for our current option, request something we need
             # if we need some of this resource
+            amount = resources_needed[resource]
             if amount > 0:
                 # request 1 of it
                 requesting[resource] = 1
@@ -2154,6 +2169,12 @@ class dylanAIPlayer(player):
         if sum(self.resources.values()) == 0:
             return False
 
+        # if we dont even have any, decline
+        for resource, amount in to_give.items():
+            # if we dont have enough
+            if self.resources[resource] == 0 or self.resources[resource] < amount:
+                return False
+            
         move_goals = self.get_move_goals(board)
         options = list(move_goals.keys())
         options.sort(reverse=True, key=lambda goal: move_goals[goal])
@@ -2161,12 +2182,13 @@ class dylanAIPlayer(player):
         # if the trade hurts our top 2 goals, decline
         if not self.can_trade_without_breaking(options[0], to_give) or not self.can_trade_without_breaking(options[1], to_give):
             return False
+        
 
         # if it is one of the resources we want
         for resource, amount in to_receive.items():
             if amount > 0:
-                # if we need this resource for either of our top two options, accept the trade
-                if self.get_resources_needed_for(options[0])[resource] + self.get_resources_needed_for(options[1])[resource] > 0:
+                # if we need this resource for either of our top option, accept the trade
+                if self.get_resources_needed_for(options[0])[resource] > 0:
                     return True
 
         return False

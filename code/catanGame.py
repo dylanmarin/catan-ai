@@ -88,13 +88,13 @@ class catanGame():
 
     def build_initial_settlements(self):
         # Initialize new players with names and colors
-        playerColors = ['black', 'darkslateblue', 'magenta4', 'orange1']
+        playerColors = ['black', 'blue', 'magenta4', 'orange1']
 
         '''
         NOTE: adding in AI players first so that I can see where they place when given the choice
-
-
         '''
+
+        translated_player_colors = ['Black', 'Blue', 'Purple', 'Orange']
 
         # '''
         for i in range(self.numPlayers):
@@ -103,15 +103,18 @@ class catanGame():
             if i == self.playerPosition:
                 # TODO take player input again
                 # playerNameInput = input("Enter Player {} name: ".format(i+1))
-                playerNameInput = "Player-{}".format(i + 1)
+                # playerNameInput = "Player-{}".format(i + 1)
+                playerNameInput = "YOU"
                 print("Added new Player: {}".format(playerNameInput))
                 newPlayer = player(
                     playerNameInput, playerColors[i], self.maxPoints)
                 self.playerQueue.put(newPlayer)
             else: 
                 # add AI player
+                # test_AI_player = dylanAIPlayer(
+                #     'AI-{}'.format(i+1), playerColors[i], self.maxPoints)
                 test_AI_player = dylanAIPlayer(
-                    'AI-{}'.format(i+1), playerColors[i], self.maxPoints)
+                    'AI-{}'.format(translated_player_colors[i]), playerColors[i], self.maxPoints)
                 test_AI_player.updateAI(self)
                 self.playerQueue.put(test_AI_player)
         # '''
@@ -242,6 +245,8 @@ class catanGame():
 
     # Function to update resources for all players
     def update_playerResources(self, diceRoll, currentPlayer):
+        self.boardView.displayDiceRoll(diceRoll)
+
         if (diceRoll != 7):  # Collect resources if not a 7
             # First get the hex or hexes corresponding to diceRoll
             hexResourcesRolled = self.board.getHexResourceRolled(diceRoll)
@@ -301,9 +306,9 @@ class catanGame():
                 
         # print current_player last always
         if not currentPlayer.isAI or not self.hide_ai_cards:
-            player_i.print_player_info(resources=True, true_vp=True, dev_cards=True, buildings_left=True, road_and_army_info=True)
+            currentPlayer.print_player_info()
         else:
-            player_i.print_player_info(resources=False, true_vp=False, dev_cards=False, buildings_left=False, road_and_army_info=True)
+            currentPlayer.print_player_info(resources=False, true_vp=False, dev_cards=False, buildings_left=False, road_and_army_info=True)
 
 
 

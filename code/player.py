@@ -507,30 +507,26 @@ class player():
 
         elif trade_type == 'PLAYER':
 
-            
-            # Select player to trade with - generate list of other players
-            playerNames = [p.name for p in list(game.playerQueue.queue)]
+            # DYLAN: update to offer to all other players:
 
-            print("\nInter-Player Trading Menu - Player Names:", playerNames)
-            print("Resource List:", resource_list)
+            # # Select player to trade with - generate list of other players
+            # playerNames = [p.name for p in list(game.playerQueue.queue)]
+            # print("\nInter-Player Trading Menu - Player Names:", playerNames)
+            # print("Resource List:", resource_list)
 
-            # Disallow trading with self
-            playerToTrade_name = ''
-            while (playerToTrade_name not in playerNames) or (playerToTrade_name == self.name):
-                playerToTrade_name = input(
-                    "Enter name of another player to trade with:")
+            # # Disallow trading with self
+            # playerToTrade_name = ''
+            # while (playerToTrade_name not in playerNames) or (playerToTrade_name == self.name):
+            #     playerToTrade_name = input(
+            #         "Enter name of another player to trade with:")
 
             # Over write and store the target player object
-            playerToTrade = None
-            for player in list(game.playerQueue.queue):
-                if player.name == playerToTrade_name:
-                    playerToTrade = player
 
             # Select resource to trade - must have at least one of that resource to trade
             resourceToTrade = ""
             while (resourceToTrade not in self.resources.keys()):
-                resourceToTrade = input("Enter resource name to trade with player {}:".format(
-                    playerToTrade_name)).upper()
+                resourceToTrade = input(
+                    "Enter resource name to trade (give):").upper()
                 # Reset if invalid resource is chosen
                 if resourceToTrade in self.resources.keys() and self.resources[resourceToTrade] == 0:
                     resourceToTrade = ""
@@ -541,8 +537,8 @@ class player():
             while (resource_traded_amount > self.resources[resourceToTrade]) or (resource_traded_amount < 1):
                 # DYLAN: Added try catch to not break in trading menu
                 try:
-                    resource_traded_amount = int(input("Enter quantity of {} to trade with player {}:".format(
-                        resourceToTrade, playerToTrade_name)))
+                    resource_traded_amount = int(input("Enter quantity of {} to give:".format(
+                        resourceToTrade)))
                 except:
                     print("Please input a valid amount")
 
@@ -550,7 +546,7 @@ class player():
             resourceToReceive = ""
             while (resourceToReceive not in self.resources.keys()) or (resourceToReceive == resourceToTrade):
                 resourceToReceive = input(
-                    "Enter resource name to receive from player {}:".format(playerToTrade_name)).upper()
+                    "Enter resource name to receive:").upper()
                 # Reset if invalid resource is chosen
                 if resourceToReceive not in self.resources.keys():
                     print("Please input valid resource")
@@ -558,11 +554,11 @@ class player():
 
             # Specify quantity to receive
             resource_received_amount = 0
-            while (resource_received_amount > playerToTrade.resources[resourceToReceive]) or (resource_received_amount < 1):
+            while (resource_received_amount < 1):
                 # DYLAN: Added try catch to not break in trading menu
                 try:
-                    resource_received_amount = int(input("Enter quantity of {} to receive from player {}:".format(
-                        resourceToReceive, playerToTrade_name)))
+                    resource_received_amount = int(input("Enter quantity of {} to receive:".format(
+                        resourceToReceive)))
                 except:
                     print("Please input a valid amount")
 
@@ -573,27 +569,33 @@ class player():
             requesting = {'ORE': 0, 'BRICK': 0,
                           'WHEAT': 0, 'WOOD': 0, 'SHEEP': 0}
 
-            for resource in offering:
-                offering[resource] = resource_traded_amount
-                requesting[resource] = resource_received_amount
+            # for resource in offering:
+            offering[resourceToTrade] = resource_traded_amount
+            requesting[resourceToReceive] = resource_received_amount
 
-            if playerToTrade.isAI:
+            # offer to all players
+            for playerToTrade in list(game.playerQueue.queue):
+                # who arent ourselves
+                if playerToTrade != self:
 
-                if playerToTrade.accept_or_decline_trade(board, offering, requesting):
+                    # if accepted, make the trade and return
+                    if playerToTrade.accept_or_decline_trade(board, offering, requesting):
 
-                    # Execute trade - player gives resource traded and gains resource received
-                    self.resources[resourceToReceive] += resource_received_amount
-                    self.resources[resourceToTrade] -= resource_traded_amount
+                        # Execute trade - player gives resource traded and gains resource received
+                        self.resources[resourceToReceive] += resource_received_amount
+                        self.resources[resourceToTrade] -= resource_traded_amount
 
-                    # Other player gains resource traded and gives resource received
-                    playerToTrade.resources[resourceToReceive] -= resource_received_amount
-                    playerToTrade.resources[resourceToTrade] += resource_traded_amount
+                        # Other player gains resource traded and gives resource received
+                        playerToTrade.resources[resourceToReceive] -= resource_received_amount
+                        playerToTrade.resources[resourceToTrade] += resource_traded_amount
 
-                    print("Player {} successfully traded {} {} for {} {} with player {}".format(self.name, resource_traded_amount, resourceToTrade,
-                                                                                                resource_received_amount, resourceToReceive, playerToTrade_name))
-                else:
-                    print("{} rejected trade for {} {} for {} {} with player {}".format(self.name, resource_traded_amount, resourceToTrade,
-                                                                                        resource_received_amount, resourceToReceive, playerToTrade_name))
+                        print("Player {} successfully traded {} {} for {} {} with player {}".format(self.name, resource_traded_amount, resourceToTrade,
+                                                                                                    resource_received_amount, resourceToReceive, playerToTrade.name))
+                        return
+                    else:
+                        print("{} rejected trade for {} {} for {} {} with player {}".format(playerToTrade.name, resource_traded_amount, resourceToTrade,
+                                                                                            resource_received_amount, resourceToReceive, self.name))
+                        continue
 
             return
 
@@ -648,19 +650,17 @@ class player():
 
         print("Player:{}, Points: {}".format(
             self.name, vp_to_show))
-        
+
         if resources:
             print("- Resources:{}".format(self.resources))
-        
+
         if dev_cards:
             print('- Available Dev Cards: {}'.format(self.devCards))
 
         if buildings_left:
             print("- RoadsLeft:{}, SettlementsLeft:{}, CitiesLeft:{}".format(
                 self.roadsLeft, self.settlementsLeft, self.citiesLeft))
-        
+
         if road_and_army_info:
             print('- MaxRoadLength:{}, LongestRoad:{}, LargestArmy:{}\n'.format(
                 self.maxRoadLength, self.longestRoadFlag, self.largestArmyFlag))
-            
-        
