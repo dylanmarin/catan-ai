@@ -512,36 +512,33 @@ class player():
 
             # DYLAN: update to offer to all other players:
 
-            # # Select player to trade with - generate list of other players
-            # playerNames = [p.name for p in list(game.playerQueue.queue)]
-            # print("\nInter-Player Trading Menu - Player Names:", playerNames)
-            # print("Resource List:", resource_list)
-
-            # # Disallow trading with self
-            # playerToTrade_name = ''
-            # while (playerToTrade_name not in playerNames) or (playerToTrade_name == self.name):
-            #     playerToTrade_name = input(
-            #         "Enter name of another player to trade with:")
-
-            # Over write and store the target player object
+            print("Initiating trade. Type CANCEL to cancel")
 
             # Select resource to trade - must have at least one of that resource to trade
             resourceToTrade = ""
             while (resourceToTrade not in self.resources.keys()):
                 resourceToTrade = input(
                     "Enter resource name to trade (give):").upper()
+                
+                if resourceToTrade == "CANCEL":
+                    return
+
                 # Reset if invalid resource is chosen
                 if resourceToTrade in self.resources.keys() and self.resources[resourceToTrade] == 0:
                     resourceToTrade = ""
                     print("Players can only trade resources they already have")
+
 
             # Specify quantity to trade
             resource_traded_amount = 0
             while (resource_traded_amount > self.resources[resourceToTrade]) or (resource_traded_amount < 1):
                 # DYLAN: Added try catch to not break in trading menu
                 try:
-                    resource_traded_amount = int(input("Enter quantity of {} to give:".format(
+                    resource_traded_amount = int(input("Enter quantity of {} to give (-1 to cancel):".format(
                         resourceToTrade)))
+                    
+                    if resource_traded_amount == -1:
+                        return
                 except:
                     print("Please input a valid amount")
 
@@ -550,6 +547,11 @@ class player():
             while (resourceToReceive not in self.resources.keys()) or (resourceToReceive == resourceToTrade):
                 resourceToReceive = input(
                     "Enter resource name to receive:").upper()
+                
+
+                if resourceToReceive == "CANCEL":
+                    return
+
                 # Reset if invalid resource is chosen
                 if resourceToReceive not in self.resources.keys():
                     print("Please input valid resource")
@@ -562,6 +564,8 @@ class player():
                 try:
                     resource_received_amount = int(input("Enter quantity of {} to receive:".format(
                         resourceToReceive)))
+                    if resource_received_amount == -1:
+                        return
                 except:
                     print("Please input a valid amount")
 
