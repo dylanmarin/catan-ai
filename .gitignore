@@ -4,3 +4,5 @@
 /.vscode
 /backup
 */backup
+.DS_STORE
+*/.DS_STORE
