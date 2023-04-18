@@ -37,6 +37,8 @@ Game functionality is implemented in the following modules:
 - The screen kind of flashes and sometimes the items on it disappear. As far as I can tell this is an issue with the updateGameScreen function being called so many times in quick succession during all of the AI opponent refreshes. I tried to work around this by adding a quick time.sleep before each player's turn, though I inconsistently still had it occur during testing. 
 - The AI all move at computer-speed, not human speed, so reading the logs is helpful to know what happened in the last 3 turns since ended yours
 - Install pygame and run catanGame.py with python 3.10 to play
+- PLAY_DEV option in the code can be ignored. It is a remnant from the initial prototype and I have left it in to avoid breaking anything
+- Besides the improvements section in my report, search TODO or IMPROVEMENT for todos and improvements
 
 ## References
 Original repo: https://github.com/kvombatkere/Catan-AI
