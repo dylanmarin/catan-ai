@@ -24,7 +24,7 @@ class catanGame():
         self.gameOver = False
         self.maxPoints = 10
         self.numPlayers = 0
-        self.playerPosition = -1
+        self.player_position = -1
         self.numAIPlayers = -1
         self.hide_ai_cards = False
         self.play_without_human = False
@@ -39,10 +39,14 @@ class catanGame():
                 print("Please input a valid number")
 
         if not self.play_without_human:
-            while (self.playerPosition not in list(range(self.numPlayers))):
+            while (self.player_position not in list(range(self.numPlayers))):
                 try:
-                    self.playerPosition = int(
-                        input("Enter position [1-{}]: ".format(self.numPlayers))) - 1
+                    self.player_position = int(
+                        input("Enter position [1-{}] (type -1 for random number): ".format(self.numPlayers))) - 1
+                    
+                    if self.player_position == -2:
+                        self.player_position = np.random.randint(0, self.numPlayers)
+
                 except:
                     print("Please input a valid number")
         else:
@@ -100,7 +104,7 @@ class catanGame():
         for i in range(self.numPlayers):
             
 
-            if i == self.playerPosition:
+            if i == self.player_position:
                 # TODO take player input again
                 # playerNameInput = input("Enter Player {} name: ".format(i+1))
                 # playerNameInput = "Player-{}".format(i + 1)
@@ -145,16 +149,18 @@ class catanGame():
         # Build Settlements and roads of each player forwards
         for player_i in playerList:
             if (player_i.isAI):
-                time.sleep(0.1)
                 # AI player calls initial setup to place its first settlements and roads
                 self.boardView.displayGameScreen()
                 player_i.initial_setup(self.board)
+                time.sleep(0.2)
                 self.boardView.displayGameScreen()
 
             else:
+                time.sleep(0.1)
                 self.build(player_i, 'SETTLE')
                 self.boardView.displayGameScreen()
 
+                time.sleep(0.1)
                 self.build(player_i, 'ROAD')
                 self.boardView.displayGameScreen()
 
@@ -163,13 +169,16 @@ class catanGame():
         for player_i in playerList:
             if (player_i.isAI):
                 player_i.initial_setup(self.board)
+                time.sleep(0.2)
                 self.boardView.displayGameScreen()
                 pygame.display.update()
 
             else:
+                time.sleep(0.1)
                 self.build(player_i, 'SETTLE')
                 self.boardView.displayGameScreen()
 
+                time.sleep(0.1)
                 self.build(player_i, 'ROAD')
                 self.boardView.displayGameScreen()
 
@@ -278,7 +287,7 @@ class catanGame():
                                 player_i.name, resourceGenerated))
 
                 # DYLAN UPDATING PRINTING TO HIDE OPPONENT CARDS
-                if not self.hide_ai_cards or i == self.playerPosition:
+                if not self.hide_ai_cards or i == self.player_position:
                     player_i.print_player_info(resources=True, true_vp=True, dev_cards=True, buildings_left=True, road_and_army_info=True)
                 else:
                     player_i.print_player_info(resources=False, true_vp=False, dev_cards=False, buildings_left=False, road_and_army_info=True)
@@ -295,12 +304,12 @@ class catanGame():
                 else:
                     # Player must discard resources
                     player_i.discardResources()
-                    a = 1
 
             # Logic for robber
             if (currentPlayer.isAI):
                 currentPlayer.place_robber(self.board)
             else:
+                time.sleep(0.1)
                 self.robber(currentPlayer)
                 self.boardView.displayGameScreen()  # Update back to original gamescreen                    
                 

@@ -472,12 +472,14 @@ class dylanAIPlayer(player):
         # able to do something basically represents whether we were able to do anything. 
         # as long as we were able to do something, evaluate our options again
         able_to_do_something = True
+
+        # make one trade per turn. avoids stupid ai trading 1:1 back and forth for the same resource
+        made_successful_trade = False
         while able_to_do_something:
             # assume we wont be able to do anything
             able_to_do_something = False
 
             # we havent yet made a successful trade
-            made_successful_trade = False
 
             # get our goals (and their desires)
             move_goals = self.get_move_goals(board)
@@ -2295,7 +2297,7 @@ class dylanAIPlayer(player):
         # if we dont even have any, decline
         for resource, amount in to_give.items():
             # if we dont have enough
-            if self.resources[resource] == 0 or self.resources[resource] < amount:
+            if (self.resources[resource] == 0 and amount > 0) or self.resources[resource] < amount:
                 return False
             
         move_goals = self.get_move_goals(board)

@@ -673,5 +673,5 @@ class player():
                 self.roadsLeft, self.settlementsLeft, self.citiesLeft))
 
         if road_and_army_info:
-            print('- MaxRoadLength:{}, LongestRoad:{}, LargestArmy:{}\n'.format(
-                self.maxRoadLength, self.longestRoadFlag, self.largestArmyFlag))
+            print('- MaxRoadLength:{}, LongestRoad:{}, KnightsPlayed:{}, LargestArmy:{}\n'.format(
+                self.maxRoadLength, self.longestRoadFlag, self.knightsPlayed, self.largestArmyFlag))

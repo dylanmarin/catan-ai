@@ -20,15 +20,18 @@ class catanBoard(hexTile, Vertex):
     def __init__(self):
         # DYLAN: Added in np seeding random for testing
 
-        # np.random.seed(121112)
         # np.random.seed(12512312)
-        # np.random.seed(15444412)
-        # np.random.seed(1597678912)
-        # np.random.seed(90812735)
-        # np.random.seed(12384524)
         # np.random.seed(123414214)
-        # np.random.seed(9185751) # triple wheat
-        np.random.seed(1239834345)
+        # np.random.seed(90812735)
+
+        # np.random.seed(15444412) # kind of good for showing initial placements if i go last
+        # np.random.seed(12384524) # exmaple where first position chooses one settlement over another because of resource diversity
+        # np.random.seed(9185751) # triple wheat - example where cranking wheat up and resource diversity down can get different playstyles
+        # np.random.seed(1239834345) # was able to win in 3rd position
+        # np.random.seed(121444897) # double ore / ore port. first position places interestingly for its second settlement on one resource # own the game in 4th position
+        np.random.seed(345678765) # got clobbered by ai on this one in 4th position
+    
+
 
 
         self.hexTileDict = {} #Dict to store all hextiles, with hexIndex as key

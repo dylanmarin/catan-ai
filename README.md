@@ -39,6 +39,8 @@ Game functionality is implemented in the following modules:
 - Install pygame and run catanGame.py with python 3.10 to play
 - PLAY_DEV option in the code can be ignored. It is a remnant from the initial prototype and I have left it in to avoid breaking anything
 - Besides the improvements section in my report, search TODO or IMPROVEMENT for todos and improvements
+- I coded on a Mac and it runs perfectly (at least as well as intended). When I ran it on my Windows computer, I found some issue with the terminal not printing as expected on the player's turn. I tried to troubleshoot this during the last day but couldn’t find the cause. I did find a work around though, which was that the terminal updated when clicking “trade w/ players”. Obviously this is not ideal, but a workaround at the very least if you are using a windows computer.
+
 
 ## References
 Original repo: https://github.com/kvombatkere/Catan-AI
