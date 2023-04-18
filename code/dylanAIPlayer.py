@@ -404,55 +404,6 @@ class dylanAIPlayer(player):
 
             return total_score
 
-    def pick_setup_road(self, board):
-        '''
-        NOTE: No longer used. Was initially used to point road directly in direction of next best settlement. Now just use road evaluation
-        TODO: Remove
-        '''
-
-        # get next best settlement, and build a road in the direction of it
-        last_settlement = self.buildGraph['SETTLEMENTS'][-1]
-
-        possible_placements = {}
-        for placement in board.get_setup_settlements(self).keys():
-            if placement != last_settlement:
-                possible_placements[placement] = 0
-
-        for p in possible_placements.keys():
-            possible_placements[p] = self.evaluate_settlement(board, p)
-
-        # get the next best settlement spot and build in its direction
-        dest = max(possible_placements, key=possible_placements.get)
-
-        left = (dest.x - last_settlement.x) < 0
-        right = (dest.x - last_settlement.x) > 0
-        up = (dest.y - last_settlement.y) < 0
-        down = (dest.y - last_settlement.y) > 0
-
-        # gets 3 roads for last settlement was placed
-        possible_roads = board.get_setup_roads(self)
-
-        valid_options = {}
-
-        for road in possible_roads:
-            valid_options[road] = 0
-            start = road[0]
-            end = road[1]
-
-            if (end.x - start.x < 0) and left:
-                valid_options[road] += 1
-
-            if (end.x - start.x > 0) and right:
-                valid_options[road] += 1
-
-            if (end.y - start.y < 0) and up:
-                valid_options[road] += 1
-
-            if (end.y - start.y > 0) and down:
-                valid_options[road] += 1
-
-        return max(valid_options, key=valid_options.get)
-
     def move(self, board):
         print("{}'s TURN...".format(self.name))
         '''
@@ -812,13 +763,13 @@ class dylanAIPlayer(player):
                 resources_bought += 1
 
         # NOTE: Code was changed so that YOP is only played when we need exactly 2 cards, so this shouldn't be reached OR needed anymore
-        # while resources_bought < 2:
-        #     # TODO: DONT randomly pick a resource
-        #     random_resource = list(self.resources.keys())[
-        #         np.random.randint(0, 5)]
-        #     self.resources[random_resource] += 1
-        #     print("Using YEAROFPLENTY for 1 {}".format(random_resource))
-        #     resources_bought += 1
+        while resources_bought < 2:
+            # TODO: DONT randomly pick a resource
+            random_resource = list(self.resources.keys())[
+                np.random.randint(0, 5)]
+            self.resources[random_resource] += 1
+            print("Using YEAROFPLENTY for 1 {}".format(random_resource))
+            resources_bought += 1
 
         self.devCardPlayedThisTurn = True
         self.devCards["YEAROFPLENTY"] -= 1
@@ -972,15 +923,12 @@ class dylanAIPlayer(player):
         '''
         debug = False
         goals = {"ROAD": 0, "SETTLEMENT": 0,
-                 "CITY": 0, "BUY_DEV": 0, "PLAY_DEV": 0}
+                 "CITY": 0, "BUY_DEV": 0}
 
         goals["ROAD"] = self.get_road_desire(board)
         goals["SETTLEMENT"] = self.get_settlement_desire(board)
         goals["CITY"] = self.get_city_desire(board)
         goals["BUY_DEV"] = self.get_buy_dev_desire(board)
-
-        # TODO: Remove entirely
-        # goals["PLAY_DEV"] = self.get_play_dev_desire(board)
 
         if debug:
             for item in goals.keys():
@@ -1005,10 +953,6 @@ class dylanAIPlayer(player):
         elif option == "BUY_DEV":
             self.draw_devCard(board)
             return
-        # TODO: Remove
-        # elif option == "PLAY_DEV":
-        #     self.play_best_dev_card(board)
-            # return
         return
 
     def place_best_road(self, board, setup=False, road_builder=False):
@@ -1352,9 +1296,6 @@ class dylanAIPlayer(player):
             return self.can_buy_city(hypothetical_extra_resources)
         elif option == "BUY_DEV":
             return self.can_buy_dev_card(board, hypothetical_extra_resources)
-        # TODO: remove
-        # elif option == "PLAY_DEV":
-        #     return self.can_play_dev_card(hypothetical_extra_resources)
         return False
 
     def able_to_trade_for(self, option, hypothetical_extra_resources={'ORE': 0, 'BRICK': 0,
@@ -1376,9 +1317,6 @@ class dylanAIPlayer(player):
         elif option == "BUY_DEV":
             return self.can_get_resources_through_trading({'ORE': 1, 'BRICK': 0,
                                                            'WHEAT': 1, 'WOOD': 0, 'SHEEP': 1}, hypothetical_extra_resources)
-        # TODO remove
-        # elif option == "PLAY_DEV":
-        #     return self.can_play_dev_card()
 
     def make_trades_for(self, option):
         '''
@@ -1399,11 +1337,6 @@ class dylanAIPlayer(player):
             return self.trade_for_resources({'ORE': 1, 'BRICK': 0,
                                              'WHEAT': 1, 'WOOD': 0, 'SHEEP': 1})
         return
-
-        # TODO: remove
-        # elif option == "PLAY_DEV":
-        #     # should not be reached
-        #     return
 
     '''
     "desire"/utility functions. main goals for these is that they do the best thing when it is obvious. DONT BE STUPID!
@@ -1544,25 +1477,6 @@ class dylanAIPlayer(player):
 
         return utility
 
-
-    # TODO: Remove. Unused
-    # def get_play_dev_desire(self, board):
-    #     '''
-
-    #     dont have to account for knights because they would've been played sooner
-
-    #     road building is good if we currently want to build roads
-
-    #     monopoly is good if we think/know there are a lot of cards out there. it is even better if we have a relevant port
-
-    #     year of plenty is good if we need 2 cards for our favorite action
-
-    #     overall utility = max of those 3 ratings
-    #     '''
-    #     utility = 0
-
-    #     return utility
-
     '''
     helper functions to tell us if we can AFFORD to do something. does not check if we have enough of that item left. 
     
@@ -1596,10 +1510,6 @@ class dylanAIPlayer(player):
                 hypothetical_extra_resources["WHEAT"] > 0
         else:
             return False
-
-    # TODO: remove. unused
-    # def can_play_dev_card(self):
-    #     return sum(self.devCards.values()) > 0 and not self.devCardPlayedThisTurn
 
     def can_get_resources_through_trading(self, desired_resources, hypothetical_extra_resources):
         '''
